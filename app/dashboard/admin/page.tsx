@@ -1,0 +1,88 @@
+import { Metadata } from 'next'
+import { redirect } from 'next/navigation'
+import { createServerClient } from '@/lib/supabase/server'
+import { AdminDashboardClient } from './AdminDashboardClient'
+
+export const metadata: Metadata = {
+  title: 'Admin Dashboard | MediNear',
+  description: 'Manage doctors, reviews, hospitals, and platform settings.',
+}
+
+export const dynamic = 'force-dynamic'
+
+export default async function AdminDashboardPage() {
+  const supabase = createServerClient()
+  
+  const { data: { session } } = await supabase.auth.getSession()
+  
+  if (!session) {
+    redirect('/auth/login?redirect=/admin/dashboard')
+  }
+
+  const { data: profile } = await supabase
+    .from('users')
+    .select('role')
+    .eq('id', session.user.id)
+    .single()
+
+  if (profile?.role !== 'admin') {
+    redirect('/')
+  }
+
+  const [
+    { count: totalUsers },
+    { count: totalDoctors },
+    { count: pendingDoctors },
+    { count: totalAppointments },
+    { count: pendingReviews },
+    { count: reportedReviews },
+    { data: recentDoctors },
+    { data: recentAppointments },
+  ] = await Promise.all([
+    supabase.from('users').select('*', { count: 'exact', head: true }),
+    supabase.from('doctors').select('*', { count: 'exact', head: true }).eq('verification_status', 'verified'),
+    supabase.from('doctors').select('*', { count: 'exact', head: true }).eq('verification_status', 'pending'),
+    supabase.from('appointments').select('*', { count: 'exact', head: true }),
+    supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'pending_moderation'),
+    supabase.from('reviews').select('*', { count: 'exact', head: true }).eq('status', 'reported'),
+    supabase
+      .from('doctors')
+      .select('id, full_name, specialization:specialties(name), verification_status, created_at, rating_average')
+      .order('created_at', { ascending: false })
+      .limit(10),
+    supabase
+      .from('appointments')
+      .select(`
+        id, status, appointment_date, appointment_time,
+        doctor:doctors(full_name),
+        patient:users(full_name)
+      `)
+      .order('created_at', { ascending: false })
+      .limit(10),
+  ])
+
+  // Transform recentDoctors to match expected type
+  const transformedDoctors = (recentDoctors || []).map((d: any) => ({
+    ...d,
+    specialization: d.specialization ? { name: d.specialization.name } : null,
+  }))
+
+  return (
+    <AdminDashboardClient
+      stats={{
+        totalUsers: totalUsers || 0,
+        totalDoctors: totalDoctors || 0,
+        pendingDoctors: pendingDoctors || 0,
+        totalAppointments: totalAppointments || 0,
+        pendingReviews: pendingReviews || 0,
+        reportedReviews: reportedReviews || 0,
+      }}
+      recentDoctors={transformedDoctors}
+      recentAppointments={(recentAppointments || []).map((a: any) => ({
+        ...a,
+        doctor: a.doctor?.[0] ? { full_name: a.doctor[0].full_name } : null,
+        patient: a.patient?.[0] ? { full_name: a.patient[0].full_name } : null,
+      }))}
+    />
+  )
+}
