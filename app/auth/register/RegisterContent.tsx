@@ -55,7 +55,11 @@ export function RegisterContent() {
       setError(error.message)
       setLoading(false)
     } else {
-      router.push('/auth/verify-email')
+      if (data.role === 'doctor') {
+        router.push('/doctor/onboarding')
+      } else {
+        router.push('/auth/verify-email')
+      }
       router.refresh()
     }
   }
