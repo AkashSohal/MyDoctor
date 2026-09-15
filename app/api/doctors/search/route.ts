@@ -1,9 +1,11 @@
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createServerClient()
+    const cookieStore = await cookies()
+    const supabase = createClient(cookieStore)
     const searchParams = request.nextUrl.searchParams
 
     const lat = parseFloat(searchParams.get('lat') || '0')

@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { notFound } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import { DoctorProfileClient } from './DoctorProfileClient'
 
 interface Props {
@@ -11,7 +12,8 @@ export const dynamic = 'force-dynamic'
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params
-  const supabase = createServerClient()
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
   
   const { data: doctor } = await supabase
     .from('doctors')
@@ -51,7 +53,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function DoctorProfilePage({ params }: Props) {
   const { id } = await params
-  const supabase = createServerClient()
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
 
   const { data: doctor, error } = await supabase
     .from('doctors')

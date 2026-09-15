@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import { DoctorDashboardClient } from './DoctorDashboardClient'
 
 export const metadata: Metadata = {
@@ -11,7 +12,8 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function DoctorDashboardPage() {
-  const supabase = createServerClient()
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
   
   const { data: { session } } = await supabase.auth.getSession()
   

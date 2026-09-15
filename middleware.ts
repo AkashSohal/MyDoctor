@@ -1,86 +1,124 @@
-import { createServerClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { createServerClient } from "@supabase/ssr";
+import { type NextRequest, NextResponse } from "next/server";
 
 export async function middleware(request: NextRequest) {
-  const supabase = createServerClient()
-  
-  const { data: { session } } = await supabase.auth.getSession()
-  
-  const pathname = request.nextUrl.pathname
-  
+  let supabaseResponse = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
+
+  const supabase = createServerClient(supabaseUrl!, supabaseKey!, {
+    cookies: {
+      getAll() {
+        return request.cookies.getAll();
+      },
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) =>
+          request.cookies.set(name, value)
+        );
+        supabaseResponse = NextResponse.next({
+          request,
+        });
+        cookiesToSet.forEach(({ name, value, options }) =>
+          supabaseResponse.cookies.set(name, value, options)
+        );
+      },
+    },
+  });
+
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
+  const pathname = request.nextUrl.pathname;
+
   // Protected routes
   const protectedRoutes = [
-    '/patient/dashboard',
-    '/doctor/dashboard',
-    '/admin/dashboard',
-  ]
-  
-  const isProtectedRoute = protectedRoutes.some(route => pathname.startsWith(route))
-  
+    "/patient/dashboard",
+    "/doctor/dashboard",
+    "/admin/dashboard",
+  ];
+
+  const isProtectedRoute = protectedRoutes.some((route) =>
+    pathname.startsWith(route)
+  );
+
   if (isProtectedRoute && !session) {
-    const redirectUrl = new URL('/auth/login', request.url)
-    redirectUrl.searchParams.set('redirect', pathname)
-    return NextResponse.redirect(redirectUrl)
+    const redirectUrl = new URL("/auth/login", request.url);
+    redirectUrl.searchParams.set("redirect", pathname);
+    return NextResponse.redirect(redirectUrl);
   }
-  
+
   // Role-based access
   if (session && isProtectedRoute) {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-      
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
       if (profile) {
-        if (pathname.startsWith('/admin/') && profile.role !== 'admin') {
-          return NextResponse.redirect(new URL('/', request.url))
+        if (pathname.startsWith("/admin/") && profile.role !== "admin") {
+          return NextResponse.redirect(new URL("/", request.url));
         }
-        if (pathname.startsWith('/doctor/') && profile.role !== 'doctor') {
-          return NextResponse.redirect(new URL('/', request.url))
+        if (pathname.startsWith("/doctor/") && profile.role !== "doctor") {
+          return NextResponse.redirect(new URL("/", request.url));
         }
-        if (pathname.startsWith('/patient/') && profile.role !== 'patient') {
-          return NextResponse.redirect(new URL('/', request.url))
+        if (pathname.startsWith("/patient/") && profile.role !== "patient") {
+          return NextResponse.redirect(new URL("/", request.url));
         }
       }
     }
   }
-  
+
   // Redirect authenticated users away from auth pages
-  const authRoutes = ['/auth/login', '/auth/register']
-  const isAuthRoute = authRoutes.some(route => pathname.startsWith(route))
-  
+  const authRoutes = ["/auth/login", "/auth/register"];
+  const isAuthRoute = authRoutes.some((route) => pathname.startsWith(route));
+
   if (isAuthRoute && session) {
-    const { data: { user } } = await supabase.auth.getUser()
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       const { data: profile } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', user.id)
-        .single()
-      
+        .from("users")
+        .select("role")
+        .eq("id", user.id)
+        .single();
+
       if (profile) {
         const redirectMap: Record<string, string> = {
-          admin: '/admin/dashboard',
-          doctor: '/doctor/dashboard',
-          patient: '/patient/dashboard',
-        }
-        return NextResponse.redirect(new URL(redirectMap[profile.role] || '/', request.url))
+          admin: "/dashboard/admin",
+          doctor: "/dashboard/doctor",
+          patient: "/dashboard/patient",
+        };
+        return NextResponse.redirect(
+          new URL(redirectMap[profile.role] || "/", request.url)
+        );
       }
     }
   }
-  
-  return NextResponse.next()
+
+  return supabaseResponse;
 }
 
 export const config = {
   matcher: [
-    '/patient/dashboard/:path*',
-    '/doctor/dashboard/:path*',
-    '/admin/dashboard/:path*',
-    '/auth/login',
-    '/auth/register',
+    "/patient/dashboard/:path*",
+    "/doctor/dashboard/:path*",
+    "/admin/dashboard/:path*",
+    "/dashboard/patient/:path*",
+    "/dashboard/doctor/:path*",
+    "/dashboard/admin/:path*",
+    "/auth/login",
+    "/auth/register",
   ],
-}
+};

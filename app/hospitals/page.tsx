@@ -1,6 +1,7 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { createServerClient } from '@/lib/supabase/server'
+import { createClient } from '@/utils/supabase/server'
+import { cookies } from 'next/headers'
 import { Card, CardContent } from '@/components/ui/card'
 import { Building2, MapPin, Phone, ExternalLink, ArrowRight, Users, Star } from 'lucide-react'
 import { formatDistance } from '@/lib/utils'
@@ -13,7 +14,8 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function HospitalsPage() {
-  const supabase = createServerClient()
+  const cookieStore = await cookies()
+  const supabase = createClient(cookieStore)
 
   const { data: hospitals } = await supabase
     .from('hospitals')
