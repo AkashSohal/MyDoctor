@@ -18,7 +18,7 @@ export default async function AdminDashboardPage() {
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
-    redirect('/auth/login?redirect=/admin/dashboard')
+    redirect('/auth/login?redirect=/dashboard/admin')
   }
 
   const { data: profile } = await supabase

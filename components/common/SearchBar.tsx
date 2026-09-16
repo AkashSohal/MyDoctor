@@ -87,7 +87,7 @@ export function SearchBar({
           className="gap-1.5 h-8 px-3"
         >
           <MapPin className="h-4 w-4" />
-          {location ? 'Use My Location' : 'Use My Location'}
+          {location ? 'Update Location' : 'Use My Location'}
         </Button>
         <span className="hidden sm:inline">or</span>
         {EXAMPLE_SEARCHES.slice(0, 4).map((search) => (

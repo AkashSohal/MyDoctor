@@ -18,7 +18,7 @@ export default async function PatientDashboardPage() {
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
-    redirect('/auth/login?redirect=/patient/dashboard')
+    redirect('/auth/login?redirect=/dashboard/patient')
   }
 
   const { data: profile } = await supabase

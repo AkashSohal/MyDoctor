@@ -128,15 +128,6 @@ export default function AdminAppointmentsPage() {
           <CardHeader>
             <div className="flex items-center gap-4">
               <Input placeholder="Search by patient, doctor, or hospital..." value={search} onChange={(e) => setSearch(e.target.value)} className="flex-1" />
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-secondary-300 rounded-lg text-sm"
-              >
-                {STATUS_OPTIONS.map(s => (
-                  <option key={s} value={s}>{s === 'all' ? 'All Status' : s.charAt(0).toUpperCase() + s.slice(1)}</option>
-                ))}
-              </select>
             </div>
           </CardHeader>
           <CardContent>

@@ -62,8 +62,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
 
     supabase.auth.getSession().then(({ data }: { data: { session: Session | null } }) => {
-      if (session?.user) {
-        fetchUser(session.user.id).then(userData => {
+      if (data.session?.user) {
+        fetchUser(data.session.user.id).then(userData => {
           setUser(userData)
           setLoading(false)
         })

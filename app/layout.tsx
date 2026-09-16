@@ -47,11 +47,6 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`${inter.variable} antialiased`}>
-      <head>
-        <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-        <link rel="manifest" href="/manifest.json" />
-      </head>
       <body className="min-h-screen bg-secondary-50 font-sans text-secondary-900 flex flex-col">
         <Providers>
           <Header />

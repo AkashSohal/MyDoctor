@@ -70,20 +70,26 @@ export default function AdminHospitalsPage() {
       longitude: formData.longitude ? parseFloat(formData.longitude) : null,
     }
 
+    let error
     if (editing) {
-      await supabase.from('hospitals').update(payload).eq('id', editing.id)
+      ({ error } = await supabase.from('hospitals').update(payload).eq('id', editing.id))
     } else {
-      await supabase.from('hospitals').insert(payload)
+      ({ error } = await supabase.from('hospitals').insert(payload))
     }
 
-    setShowModal(false)
+    if (error) {
+      alert('Error saving hospital: ' + error.message)
+    } else {
+      setShowModal(false)
+    }
     setSaving(false)
     loadHospitals()
   }
 
   const handleDelete = async (id: string) => {
     if (confirm('Delete this hospital?')) {
-      await supabase.from('hospitals').delete().eq('id', id)
+      const { error } = await supabase.from('hospitals').delete().eq('id', id)
+      if (error) alert('Error deleting hospital: ' + error.message)
       loadHospitals()
     }
   }

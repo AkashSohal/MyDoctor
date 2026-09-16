@@ -18,7 +18,7 @@ export default async function DoctorDashboardPage() {
   const { data: { session } } = await supabase.auth.getSession()
   
   if (!session) {
-    redirect('/auth/login?redirect=/doctor/dashboard')
+    redirect('/auth/login?redirect=/dashboard/doctor')
   }
 
   const { data: profile } = await supabase
@@ -50,7 +50,7 @@ export default async function DoctorDashboardPage() {
       .from('appointments')
       .select(`
         *,
-        patient:users(full_name, phone, email),
+        patient:users(full_name, phone, email, avatar_url),
         hospital:hospitals(name, address)
       `)
       .eq('doctor_id', doctor.id)

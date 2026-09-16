@@ -2,16 +2,18 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { formatDate, formatTime, cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import { formatDate, formatTime } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Avatar } from '@/components/ui/avatar'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { 
-  Calendar, Clock, Stethoscope, Heart, Star, Building2, MapPin, 
-  X, CheckCircle, AlertCircle, Clock as ClockIcon, 
-  User, Settings, LogOut, Plus, ArrowRight
+import { RatingStars } from '@/components/common/RatingStars'
+import {
+  Calendar, Clock, Heart, Star, Building2, MapPin,
+  X, CheckCircle, Clock as ClockIcon, Plus, Settings
 } from 'lucide-react'
 import { Appointment, Doctor, Review } from '@/lib/types'
 
@@ -30,6 +32,16 @@ export function PatientDashboardClient({
   savedDoctors, 
   reviews 
 }: PatientDashboardClientProps) {
+  const router = useRouter()
+  const supabase = createClient()
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+  const [localUpcoming, setLocalUpcoming] = React.useState(upcomingAppointments)
+  const [localSaved, setLocalSaved] = React.useState(savedDoctors)
+
+  React.useEffect(() => {
+    setLocalUpcoming(upcomingAppointments)
+    setLocalSaved(savedDoctors)
+  }, [upcomingAppointments, savedDoctors])
   const getStatusBadge = (status: string) => {
     const badges = {
       pending: <Badge variant="warning">Pending</Badge>,
@@ -44,6 +56,25 @@ export function PatientDashboardClient({
   const canReview = (appointment: Appointment) => {
     return appointment.status === 'completed' && 
            !reviews.some(r => r.appointment_id === appointment.id)
+  }
+
+  const handleCancelAppointment = async (appointmentId: string) => {
+    if (!confirm('Cancel this appointment?')) return
+    setUpdatingId(appointmentId)
+    const { error } = await supabase.from('appointments').update({ status: 'cancelled' }).eq('id', appointmentId)
+    if (!error) {
+      setLocalUpcoming(prev => prev.map(a => a.id === appointmentId ? { ...a, status: 'cancelled' } : a))
+    }
+    setUpdatingId(null)
+  }
+
+  const handleRemoveSaved = async (doctorId: string) => {
+    setUpdatingId(doctorId)
+    const { error } = await supabase.from('saved_doctors').delete().eq('doctor_id', doctorId).eq('patient_id', user.id)
+    if (!error) {
+      setLocalSaved(prev => prev.filter(d => d.id !== doctorId))
+    }
+    setUpdatingId(null)
   }
 
   return (
@@ -147,7 +178,7 @@ export function PatientDashboardClient({
           </TabsList>
 
           <TabsContent value="upcoming" className="mt-6">
-            {upcomingAppointments.length === 0 ? (
+            {localUpcoming.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Calendar className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
@@ -160,7 +191,7 @@ export function PatientDashboardClient({
               </Card>
             ) : (
               <div className="space-y-4">
-                {upcomingAppointments.map((appointment) => (
+                {localUpcoming.map((appointment) => (
                   <Card key={appointment.id}>
                     <CardContent className="p-5">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -194,7 +225,7 @@ export function PatientDashboardClient({
                           </div>
                           {getStatusBadge(appointment.status)}
                           {appointment.status === 'pending' && (
-                            <Button variant="outline" size="sm" onClick={() => {}}>
+                            <Button variant="outline" size="sm" onClick={() => handleCancelAppointment(appointment.id)} disabled={updatingId === appointment.id}>
                               Cancel
                             </Button>
                           )}
@@ -244,10 +275,12 @@ export function PatientDashboardClient({
                           </div>
                           {getStatusBadge(appointment.status)}
                           {canReview(appointment) && (
-                            <Button size="sm" onClick={() => {}}>
-                              <Star className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
-                              Write Review
-                            </Button>
+                            <Link href={`/doctors/${appointment.doctor_id}`}>
+                              <Button size="sm">
+                                <Star className="h-4 w-4 mr-2 fill-amber-500 text-amber-500" />
+                                Write Review
+                              </Button>
+                            </Link>
                           )}
                         </div>
                       </div>
@@ -259,7 +292,7 @@ export function PatientDashboardClient({
           </TabsContent>
 
           <TabsContent value="saved" className="mt-6">
-            {savedDoctors.length === 0 ? (
+            {localSaved.length === 0 ? (
               <Card>
                 <CardContent className="p-8 text-center">
                   <Heart className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
@@ -272,7 +305,7 @@ export function PatientDashboardClient({
               </Card>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {savedDoctors.map((doctor) => (
+                {localSaved.map((doctor) => (
                   <Card key={doctor.id}>
                     <CardContent className="p-4">
                       <div className="flex items-start gap-3">
@@ -308,7 +341,7 @@ export function PatientDashboardClient({
                         <Link href={`/doctors/${doctor.id}`}>
                           <Button variant="outline" size="sm" className="flex-1">View</Button>
                         </Link>
-                        <Button variant="ghost" size="sm" onClick={() => {}}>
+                        <Button variant="ghost" size="sm" onClick={() => handleRemoveSaved(doctor.id)} disabled={updatingId === doctor.id}>
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
@@ -370,5 +403,3 @@ export function PatientDashboardClient({
     </div>
   )
 }
-
-import { RatingStars } from '@/components/common/RatingStars'

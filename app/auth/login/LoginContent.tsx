@@ -173,9 +173,9 @@ export function LoginContent() {
 
         <p className="text-center text-xs text-secondary-400 mt-6">
           By signing in, you agree to our{' '}
-          <Link href="/terms" className="underline">Terms of Service</Link>{' '}
-          and{' '}
-          <Link href="/privacy" className="underline">Privacy Policy</Link>
+                <Link href="/about" className="underline">Terms of Service</Link>{' '}
+                and{' '}
+                <Link href="/about" className="underline">Privacy Policy</Link>
         </p>
       </div>
     </div>

@@ -2,7 +2,9 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { formatDate, formatTime, cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import { formatDate, formatTime } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,58 +14,182 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
-import { 
-  Calendar, Clock, Stethoscope, Heart, Star, Building2, MapPin, 
-  X, CheckCircle, AlertCircle, Clock as ClockIcon, 
-  User, Settings, LogOut, Plus, ArrowRight, Edit, Trash2,
-  Stethoscope as StethoscopeIcon, GraduationCap, Briefcase, MapPin as MapPinIcon
+import { RatingStars } from '@/components/common/RatingStars'
+import {
+  Calendar, Clock, Stethoscope, Star, Building2,
+  CheckCircle, AlertCircle, Clock as ClockIcon,
+  Settings, Plus, Edit, Trash2
 } from 'lucide-react'
 import { Doctor, Appointment, Availability, Hospital } from '@/lib/types'
 
 interface DoctorDashboardClientProps {
   doctor: Doctor
-  appointments: (Appointment & { patient?: { full_name: string; phone: string; email: string }; hospital?: { name: string; address: string } })[]
+  appointments: (Appointment & { patient?: { full_name: string; phone: string; email: string; avatar_url?: string }; hospital?: { name: string; address: string } })[]
   availability: (Availability & { hospital?: Hospital })[]
   hospitals: Hospital[]
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
-export function DoctorDashboardClient({ 
-  doctor, 
-  appointments, 
-  availability, 
-  hospitals 
+export function DoctorDashboardClient({
+  doctor,
+  appointments,
+  availability,
+  hospitals
 }: DoctorDashboardClientProps) {
+  const router = useRouter()
+  const supabase = createClient()
   const [activeTab, setActiveTab] = React.useState('overview')
   const [profileEditing, setProfileEditing] = React.useState(false)
   const [showAvailabilityModal, setShowAvailabilityModal] = React.useState(false)
   const [editingAvailability, setEditingAvailability] = React.useState<Availability | null>(null)
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+
+  // Availability modal state
+  const [availDay, setAvailDay] = React.useState('1')
+  const [availStartTime, setAvailStartTime] = React.useState('09:00')
+  const [availEndTime, setAvailEndTime] = React.useState('13:00')
+  const [availHospitalId, setAvailHospitalId] = React.useState('')
+
+  // Profile editing state
+  const [profileData, setProfileData] = React.useState({
+    qualifications: doctor.qualifications?.join(', ') || '',
+    experience_years: doctor.experience_years || 0,
+    consultation_fee: doctor.consultation_fee || 0,
+    gender: (doctor.gender || 'male') as 'male' | 'female' | 'other',
+    languages: doctor.languages?.join(', ') || '',
+    bio: doctor.bio || '',
+  })
+
+  // Local state for appointments and availability
+  const [localAppointments, setLocalAppointments] = React.useState(appointments)
+  const [localAvailability, setLocalAvailability] = React.useState(availability)
+
+  React.useEffect(() => {
+    setLocalAppointments(appointments)
+    setLocalAvailability(availability)
+  }, [appointments, availability])
+
+  React.useEffect(() => {
+    if (editingAvailability) {
+      setAvailDay(editingAvailability.day_of_week.toString())
+      setAvailStartTime(editingAvailability.start_time)
+      setAvailEndTime(editingAvailability.end_time)
+      setAvailHospitalId(editingAvailability.hospital_id)
+    } else {
+      setAvailDay('1')
+      setAvailStartTime('09:00')
+      setAvailEndTime('13:00')
+      setAvailHospitalId(hospitals[0]?.id || '')
+    }
+  }, [editingAvailability, hospitals])
+
+  const handleAppointmentAction = async (appointmentId: string, status: Appointment['status']) => {
+    setUpdatingId(appointmentId)
+    const { error } = await supabase
+      .from('appointments')
+      .update({ status })
+      .eq('id', appointmentId)
+    if (!error) {
+      setLocalAppointments(prev => prev.map(a => a.id === appointmentId ? { ...a, status } : a))
+    }
+    setUpdatingId(null)
+  }
+
+  const handleSaveAvailability = async () => {
+    setUpdatingId('availability')
+    if (editingAvailability) {
+      const { error } = await supabase
+        .from('availability')
+        .update({
+          day_of_week: parseInt(availDay),
+          start_time: availStartTime,
+          end_time: availEndTime,
+          hospital_id: availHospitalId,
+        })
+        .eq('id', editingAvailability.id)
+      if (!error) {
+        setLocalAvailability(prev => prev.map(a =>
+          a.id === editingAvailability.id
+            ? { ...a, day_of_week: parseInt(availDay), start_time: availStartTime, end_time: availEndTime, hospital_id: availHospitalId, hospital: hospitals.find(h => h.id === availHospitalId) }
+            : a
+        ))
+      }
+    } else {
+      const { data, error } = await supabase
+        .from('availability')
+        .insert({
+          doctor_id: doctor.id,
+          day_of_week: parseInt(availDay),
+          start_time: availStartTime,
+          end_time: availEndTime,
+          hospital_id: availHospitalId,
+          is_active: true,
+        })
+        .select()
+        .single()
+      if (!error && data) {
+        setLocalAvailability(prev => [...prev, { ...data, hospital: hospitals.find(h => h.id === availHospitalId) }])
+      }
+    }
+    setShowAvailabilityModal(false)
+    setEditingAvailability(null)
+    setUpdatingId(null)
+  }
+
+  const handleDeleteAvailability = async (id: string) => {
+    if (!confirm('Delete this schedule?')) return
+    setUpdatingId(id)
+    const { error } = await supabase.from('availability').delete().eq('id', id)
+    if (!error) {
+      setLocalAvailability(prev => prev.filter(a => a.id !== id))
+    }
+    setUpdatingId(null)
+  }
+
+  const handleSaveProfile = async () => {
+    setUpdatingId('profile')
+    const { error } = await supabase
+      .from('doctors')
+      .update({
+        qualifications: profileData.qualifications.split(',').map(s => s.trim()).filter(Boolean),
+        experience_years: profileData.experience_years,
+        consultation_fee: profileData.consultation_fee,
+        gender: profileData.gender,
+        languages: profileData.languages.split(',').map(s => s.trim()).filter(Boolean),
+        bio: profileData.bio,
+      })
+      .eq('id', doctor.id)
+    if (!error) {
+      setProfileEditing(false)
+      router.refresh()
+    }
+    setUpdatingId(null)
+  }
 
   const getStatusBadge = (status: string) => {
-    const badges = {
+    const badges: Record<string, React.ReactNode> = {
       pending: <Badge variant="warning">Pending</Badge>,
       confirmed: <Badge variant="success">Confirmed</Badge>,
       cancelled: <Badge variant="danger">Cancelled</Badge>,
       completed: <Badge variant="default">Completed</Badge>,
       rejected: <Badge variant="danger">Rejected</Badge>,
     }
-    return badges[status as keyof typeof badges] || <Badge>{status}</Badge>
+    return badges[status] || <Badge>{status}</Badge>
   }
 
   const getVerificationBadge = (status: string) => {
-    const badges = {
+    const badges: Record<string, React.ReactNode> = {
       pending: <Badge variant="warning">Verification Pending</Badge>,
       verified: <Badge variant="success">Verified</Badge>,
       rejected: <Badge variant="danger">Rejected</Badge>,
       suspended: <Badge variant="outline">Suspended</Badge>,
     }
-    return badges[status as keyof typeof badges] || <Badge>{status}</Badge>
+    return badges[status] || <Badge>{status}</Badge>
   }
 
   return (
     <div className="min-h-screen bg-secondary-50">
-      {/* Header */}
       <div className="bg-white border-b border-secondary-200">
         <div className="container py-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -78,18 +204,10 @@ export function DoctorDashboardClient({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3">
-              <Link href="/doctor/settings">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
           </div>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="container py-6">
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
@@ -100,14 +218,13 @@ export function DoctorDashboardClient({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
-                    {appointments.filter(a => a.status === 'confirmed' && a.appointment_date >= new Date().toISOString().split('T')[0]).length}
+                    {localAppointments.filter(a => a.status === 'confirmed' && a.appointment_date >= new Date().toISOString().split('T')[0]).length}
                   </p>
-                  <p className="text-sm text-secondary-500">Upcoming Appointments</p>
+                  <p className="text-sm text-secondary-500">Upcoming</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -116,14 +233,13 @@ export function DoctorDashboardClient({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
-                    {appointments.filter(a => a.status === 'completed').length}
+                    {localAppointments.filter(a => a.status === 'completed').length}
                   </p>
                   <p className="text-sm text-secondary-500">Completed</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -132,14 +248,13 @@ export function DoctorDashboardClient({
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
-                    {appointments.filter(a => a.status === 'pending').length}
+                    {localAppointments.filter(a => a.status === 'pending').length}
                   </p>
-                  <p className="text-sm text-secondary-500">Pending Review</p>
+                  <p className="text-sm text-secondary-500">Pending</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
@@ -147,15 +262,14 @@ export function DoctorDashboardClient({
                   <Stethoscope className="h-6 w-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-secondary-900">{availability.length}</p>
-                  <p className="text-sm text-secondary-500">Active Schedules</p>
+                  <p className="text-2xl font-bold text-secondary-900">{localAvailability.length}</p>
+                  <p className="text-sm text-secondary-500">Schedules</p>
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -164,38 +278,25 @@ export function DoctorDashboardClient({
             <TabsTrigger value="profile">Profile</TabsTrigger>
           </TabsList>
 
-          {/* Overview */}
           <TabsContent value="overview" className="mt-6">
             <div className="grid gap-6 lg:grid-cols-2">
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="flex items-center gap-2">
-                    <StethoscopeIcon className="h-5 w-5" />
-                    Quick Actions
-                  </CardTitle>
+                  <CardTitle>Quick Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Link href="/appointments/new">
-                    <Button className="w-full justify-start gap-2">
-                      <Plus className="h-4 w-4" />
-                      Add Availability Slot
-                    </Button>
-                  </Link>
-                  <Link href="/doctor/hospitals">
-                    <Button variant="outline" className="w-full justify-start gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Manage Hospitals
-                    </Button>
-                  </Link>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setProfileEditing(true)}>
+                  <Button className="w-full justify-start gap-2" onClick={() => { setEditingAvailability(null); setShowAvailabilityModal(true) }}>
+                    <Plus className="h-4 w-4" />
+                    Add Availability Slot
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => { setActiveTab('profile'); setProfileEditing(true) }}>
                     <Edit className="h-4 w-4" />
                     Edit Profile
                   </Button>
                 </CardContent>
               </Card>
-
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between">
+                <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Star className="h-5 w-5" />
                     Rating Summary
@@ -205,7 +306,7 @@ export function DoctorDashboardClient({
                   <div className="flex items-center gap-8">
                     <div className="text-center">
                       <p className="text-4xl font-bold text-secondary-900">{doctor.rating_average.toFixed(1)}</p>
-                      <RatingStars rating={doctor.rating_average} size="lg" />
+                      <RatingStars rating={doctor.rating_average} />
                     </div>
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-3">
@@ -213,18 +314,8 @@ export function DoctorDashboardClient({
                         <span className="font-medium">{doctor.rating_count}</span>
                       </div>
                       <div className="flex items-center gap-3">
-                        <span className="w-24 text-sm text-secondary-600">Verified Reviews</span>
+                        <span className="w-24 text-sm text-secondary-600">Verified</span>
                         <span className="font-medium">{doctor.verified_review_count}</span>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="w-24 text-sm text-secondary-600">Profile Completion</span>
-                        <div className="flex-1 h-2 bg-secondary-200 rounded-full overflow-hidden">
-                          <div 
-                            className="h-full bg-primary-600 rounded-full transition-all" 
-                            style={{ width: `${doctor.profile_completion_percentage}%` }}
-                          />
-                        </div>
-                        <span className="text-sm font-medium w-12 text-right">{doctor.profile_completion_percentage}%</span>
                       </div>
                     </div>
                   </div>
@@ -233,10 +324,9 @@ export function DoctorDashboardClient({
             </div>
           </TabsContent>
 
-          {/* Appointments */}
           <TabsContent value="appointments" className="mt-6">
             <div className="space-y-4">
-              {appointments.length === 0 ? (
+              {localAppointments.length === 0 ? (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <Calendar className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
@@ -245,14 +335,14 @@ export function DoctorDashboardClient({
                   </CardContent>
                 </Card>
               ) : (
-                appointments.map((appointment) => (
+                localAppointments.map((appointment) => (
                   <Card key={appointment.id}>
                     <CardContent className="p-5">
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div className="flex items-center gap-4">
-                          <Avatar 
-                            src={appointment.patient?.avatar_url} 
-                            fallback={appointment.patient?.full_name} 
+                          <Avatar
+                            src={appointment.patient?.avatar_url}
+                            fallback={appointment.patient?.full_name}
                             size="lg"
                           />
                           <div>
@@ -263,30 +353,30 @@ export function DoctorDashboardClient({
                         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
                           <div className="flex items-center gap-2 text-sm text-secondary-600">
                             <Calendar className="h-4 w-4" />
-                            <span>{formatDate(appointment.appointment_date)}</span>
+                            {formatDate(appointment.appointment_date)}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-secondary-600">
                             <Clock className="h-4 w-4" />
-                            <span>{formatTime(appointment.appointment_time)}</span>
+                            {formatTime(appointment.appointment_time)}
                           </div>
                           <div className="flex items-center gap-2 text-sm text-secondary-600">
                             <Building2 className="h-4 w-4" />
-                            <span>{appointment.hospital?.name}</span>
+                            {appointment.hospital?.name}
                           </div>
                           {getStatusBadge(appointment.status)}
                           {appointment.status === 'pending' && (
                             <div className="flex gap-2">
-                              <Button size="sm" variant="success" onClick={() => {}}>
+                              <Button size="sm" variant="success" onClick={() => handleAppointmentAction(appointment.id, 'confirmed')} disabled={updatingId === appointment.id}>
                                 Confirm
                               </Button>
-                              <Button size="sm" variant="destructive" onClick={() => {}}>
+                              <Button size="sm" variant="destructive" onClick={() => handleAppointmentAction(appointment.id, 'rejected')} disabled={updatingId === appointment.id}>
                                 Reject
                               </Button>
                             </div>
                           )}
                           {appointment.status === 'confirmed' && (
-                            <Button size="sm" onClick={() => {}}>
-                              Mark Complete
+                            <Button size="sm" onClick={() => handleAppointmentAction(appointment.id, 'completed')} disabled={updatingId === appointment.id}>
+                              Complete
                             </Button>
                           )}
                         </div>
@@ -303,7 +393,6 @@ export function DoctorDashboardClient({
             </div>
           </TabsContent>
 
-          {/* Availability */}
           <TabsContent value="availability" className="mt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-semibold text-secondary-900">Weekly Schedule</h2>
@@ -312,12 +401,10 @@ export function DoctorDashboardClient({
                 Add Schedule
               </Button>
             </div>
-
             <div className="space-y-4">
               {DAYS.map((day, dayIndex) => {
-                const daySlots = availability.filter(a => a.day_of_week === dayIndex)
+                const daySlots = localAvailability.filter(a => a.day_of_week === dayIndex)
                 if (daySlots.length === 0) return null
-                
                 return (
                   <Card key={day}>
                     <CardContent className="p-4">
@@ -327,13 +414,13 @@ export function DoctorDashboardClient({
                           <div key={slot.id} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3 bg-secondary-50 rounded-lg">
                             <div className="flex items-center gap-3">
                               <span className="font-medium">{slot.start_time} - {slot.end_time}</span>
-                              <Badge variant="outline" size="sm">{slot.hospital?.name}</Badge>
+                              <Badge variant="outline">{slot.hospital?.name}</Badge>
                             </div>
                             <div className="flex gap-2">
                               <Button variant="ghost" size="sm" onClick={() => { setEditingAvailability(slot); setShowAvailabilityModal(true) }}>
                                 <Edit className="h-4 w-4" />
                               </Button>
-                              <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => {}}>
+                              <Button variant="ghost" size="sm" className="text-red-600 hover:bg-red-50" onClick={() => handleDeleteAvailability(slot.id)} disabled={updatingId === slot.id}>
                                 <Trash2 className="h-4 w-4" />
                               </Button>
                             </div>
@@ -344,7 +431,7 @@ export function DoctorDashboardClient({
                   </Card>
                 )
               })}
-              {availability.length === 0 && (
+              {localAvailability.length === 0 && (
                 <Card>
                   <CardContent className="p-8 text-center">
                     <ClockIcon className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
@@ -360,7 +447,6 @@ export function DoctorDashboardClient({
             </div>
           </TabsContent>
 
-          {/* Profile */}
           <TabsContent value="profile" className="mt-6">
             <div className="max-w-2xl">
               <Card>
@@ -369,41 +455,47 @@ export function DoctorDashboardClient({
                 </CardHeader>
                 <CardContent className="space-y-6">
                   <div className="flex items-center gap-4">
-                    <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="2xl" />
+                    <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" />
                     <div>
                       <h3 className="text-lg font-semibold">Dr. {doctor.full_name}</h3>
                       <p className="text-secondary-500">{doctor.specialization?.name}</p>
                     </div>
                   </div>
-
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div>
                       <Label>Qualifications</Label>
-                      <Textarea 
-                        value={doctor.qualifications?.join(', ') || ''} 
+                      <Textarea
+                        value={profileData.qualifications}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, qualifications: e.target.value }))}
                         disabled={!profileEditing}
                         rows={3}
                       />
                     </div>
                     <div>
                       <Label>Experience (Years)</Label>
-                      <Input 
-                        type="number" 
-                        value={doctor.experience_years} 
-                        disabled={!profileEditing} 
+                      <Input
+                        type="number"
+                        value={profileData.experience_years}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, experience_years: parseInt(e.target.value) || 0 }))}
+                        disabled={!profileEditing}
                       />
                     </div>
                     <div>
                       <Label>Consultation Fee (₹)</Label>
-                      <Input 
-                        type="number" 
-                        value={doctor.consultation_fee} 
-                        disabled={!profileEditing} 
+                      <Input
+                        type="number"
+                        value={profileData.consultation_fee}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, consultation_fee: parseInt(e.target.value) || 0 }))}
+                        disabled={!profileEditing}
                       />
                     </div>
                     <div>
                       <Label>Gender</Label>
-                      <Select value={doctor.gender || ''} disabled={!profileEditing}>
+                      <Select
+                        value={profileData.gender}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, gender: e.target.value as 'male' | 'female' | 'other' }))}
+                        disabled={!profileEditing}
+                      >
                         <option value="male">Male</option>
                         <option value="female">Female</option>
                         <option value="other">Other</option>
@@ -411,47 +503,29 @@ export function DoctorDashboardClient({
                     </div>
                     <div className="sm:col-span-2">
                       <Label>Languages</Label>
-                      <Input 
-                        value={doctor.languages?.join(', ') || ''} 
+                      <Input
+                        value={profileData.languages}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, languages: e.target.value }))}
                         disabled={!profileEditing}
-                        placeholder="English, Hindi, Punjabi"
+                        placeholder="English, Hindi"
                       />
                     </div>
                     <div className="sm:col-span-2">
                       <Label>About / Bio</Label>
-                      <Textarea 
-                        value={doctor.bio || ''} 
+                      <Textarea
+                        value={profileData.bio}
+                        onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
                         disabled={!profileEditing}
                         rows={4}
-                        placeholder="Tell patients about your approach, specialties, etc."
                       />
                     </div>
                   </div>
-
-                  <div className="border-t border-secondary-200 pt-6">
-                    <h3 className="text-lg font-semibold mb-4">Hospital Affiliations</h3>
-                    <div className="space-y-3">
-                      {doctor.hospitals?.map((hospital) => (
-                        <div key={hospital.id} className="flex items-center justify-between p-3 bg-secondary-50 rounded-lg">
-                          <div className="flex items-center gap-3">
-                            <Building2 className="h-5 w-5 text-secondary-400" />
-                            <div>
-                              <p className="font-medium">{hospital.name}</p>
-                              <p className="text-sm text-secondary-500">{hospital.address}</p>
-                            </div>
-                          </div>
-                          <Button variant="ghost" size="sm" onClick={() => {}}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button variant="outline" onClick={() => {}}>
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Hospital
-                      </Button>
+                  {profileEditing && (
+                    <div className="flex gap-2">
+                      <Button variant="outline" className="flex-1" onClick={() => setProfileEditing(false)}>Cancel</Button>
+                      <Button className="flex-1" onClick={handleSaveProfile} loading={updatingId === 'profile'}>Save Profile</Button>
                     </div>
-                  </div>
-
+                  )}
                   {!profileEditing && (
                     <Button onClick={() => setProfileEditing(true)} className="w-full">
                       <Edit className="h-4 w-4 mr-2" />
@@ -460,62 +534,47 @@ export function DoctorDashboardClient({
                   )}
                 </CardContent>
               </Card>
-
-              <Card className="mt-6">
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <AlertCircle className="h-5 w-5" />
-                    Verification Status
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center gap-4">
-                    {getVerificationBadge(doctor.verification_status)}
-                    <div>
-                      <p className="text-secondary-600">Your profile is {doctor.verification_status}.</p>
-                      {doctor.verification_status === 'pending' && (
-                        <p className="text-sm text-secondary-500 mt-1">Admin review typically takes 2-3 business days.</p>
-                      )}
-                      {doctor.verification_status === 'rejected' && (
-                        <p className="text-sm text-red-600 mt-1">Please check your email for rejection reasons and resubmit.</p>
-                      )}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
         </Tabs>
       </div>
 
-      {/* Availability Modal */}
       {showAvailabilityModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-          <Card className="w-full max-w-md max-h-[90vh] overflow-y-auto">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAvailabilityModal(false)}>
+          <Card className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <CardHeader>
               <CardTitle>{editingAvailability ? 'Edit Schedule' : 'Add Schedule'}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <Select placeholder="Select day">
-                {DAYS.map((day, i) => (
-                  <option key={i} value={i.toString()}>{day}</option>
-                ))}
-              </Select>
-              
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input type="time" placeholder="Start time" />
-                <Input type="time" placeholder="End time" />
+              <div>
+                <Label>Day</Label>
+                <Select value={availDay} onChange={(e) => setAvailDay(e.target.value)}>
+                  {DAYS.map((day, i) => (
+                    <option key={i} value={i.toString()}>{day}</option>
+                  ))}
+                </Select>
               </div>
-              
-              <Select placeholder="Select hospital">
-                {hospitals.map((h) => (
-                  <option key={h.id} value={h.id}>{h.name}</option>
-                ))}
-              </Select>
-              
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label>Start Time</Label>
+                  <Input type="time" value={availStartTime} onChange={(e) => setAvailStartTime(e.target.value)} />
+                </div>
+                <div>
+                  <Label>End Time</Label>
+                  <Input type="time" value={availEndTime} onChange={(e) => setAvailEndTime(e.target.value)} />
+                </div>
+              </div>
+              <div>
+                <Label>Hospital</Label>
+                <Select value={availHospitalId} onChange={(e) => setAvailHospitalId(e.target.value)}>
+                  {hospitals.map((h) => (
+                    <option key={h.id} value={h.id}>{h.name}</option>
+                  ))}
+                </Select>
+              </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setShowAvailabilityModal(false)}>Cancel</Button>
-                <Button className="flex-1" onClick={() => { setShowAvailabilityModal(false) }}>
+                <Button className="flex-1" onClick={handleSaveAvailability} loading={updatingId === 'availability'}>
                   {editingAvailability ? 'Save Changes' : 'Add Schedule'}
                 </Button>
               </div>
@@ -526,5 +585,3 @@ export function DoctorDashboardClient({
     </div>
   )
 }
-
-import { RatingStars } from '@/components/common/RatingStars'

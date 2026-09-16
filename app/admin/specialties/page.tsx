@@ -45,18 +45,21 @@ export default function AdminSpecialtiesPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    let error
     if (editing) {
-      await supabase.from('specialties').update(formData).eq('id', editing.id)
+      ({ error } = await supabase.from('specialties').update(formData).eq('id', editing.id))
     } else {
-      await supabase.from('specialties').insert(formData)
+      ({ error } = await supabase.from('specialties').insert(formData))
     }
+    if (error) alert('Error saving specialty: ' + error.message)
     setShowModal(false)
     loadSpecialties()
   }
 
   const handleDelete = async (id: string) => {
     if (confirm('Delete this specialty?')) {
-      await supabase.from('specialties').delete().eq('id', id)
+      const { error } = await supabase.from('specialties').delete().eq('id', id)
+      if (error) alert('Error deleting specialty: ' + error.message)
       loadSpecialties()
     }
   }

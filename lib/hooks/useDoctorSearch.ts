@@ -1,9 +1,8 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { createClient } from '@/utils/supabase/client'
 import { Doctor, SearchFilters, SearchResult, Location } from '@/lib/types'
-import { debounce } from '@/lib/utils'
 
 const supabase = createClient()
 
@@ -24,9 +23,26 @@ export function useDoctorSearch(options: UseDoctorSearchOptions = {}) {
   const [searchQuery, setSearchQuery] = useState('')
 
   const perPage = 20
+  const debounceRef = useRef<NodeJS.Timeout | null>(null)
+  const locationRef = useRef(options.location)
+  const filtersRef = useRef(filters)
+  const searchQueryRef = useRef(searchQuery)
+
+  useEffect(() => {
+    locationRef.current = options.location
+  }, [options.location])
+
+  useEffect(() => {
+    filtersRef.current = filters
+  }, [filters])
+
+  useEffect(() => {
+    searchQueryRef.current = searchQuery
+  }, [searchQuery])
 
   const searchDoctors = useCallback(async (pageNum: number = 1, append: boolean = false) => {
-    if (!options.location?.latitude || !options.location?.longitude) {
+    const loc = locationRef.current
+    if (!loc?.latitude || !loc?.longitude) {
       setError('Location is required to search for doctors')
       return
     }
@@ -36,20 +52,22 @@ export function useDoctorSearch(options: UseDoctorSearchOptions = {}) {
 
     try {
       const searchParams = new URLSearchParams({
-        lat: options.location.latitude.toString(),
-        lng: options.location.longitude.toString(),
+        lat: loc.latitude.toString(),
+        lng: loc.longitude.toString(),
         page: pageNum.toString(),
         per_page: perPage.toString(),
       })
 
-      Object.entries(filters).forEach(([key, value]) => {
+      const currentFilters = filtersRef.current
+      Object.entries(currentFilters).forEach(([key, value]) => {
         if (value !== undefined && value !== null && value !== '') {
           searchParams.append(key, value.toString())
         }
       })
 
-      if (searchQuery) {
-        searchParams.append('q', searchQuery)
+      const query = searchQueryRef.current
+      if (query) {
+        searchParams.append('q', query)
       }
 
       const response = await fetch(`/api/doctors/search?${searchParams.toString()}`)
@@ -74,24 +92,25 @@ export function useDoctorSearch(options: UseDoctorSearchOptions = {}) {
     } finally {
       setLoading(false)
     }
-  }, [options.location, filters, searchQuery])
-
-  const debouncedSearch = useCallback(
-    debounce((pageNum: number) => searchDoctors(pageNum), 300),
-    [searchDoctors]
-  )
+  }, [])
 
   useEffect(() => {
     if (options.autoSearch && options.location) {
       searchDoctors(1)
     }
-  }, [options.autoSearch, options.location])
+  }, [options.autoSearch, options.location, searchDoctors])
 
   useEffect(() => {
-    if (options.location) {
-      debouncedSearch(1)
+    if (locationRef.current) {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+      debounceRef.current = setTimeout(() => {
+        searchDoctors(1)
+      }, 300)
     }
-  }, [filters, searchQuery, options.location])
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current)
+    }
+  }, [filters, searchQuery, searchDoctors])
 
   const loadMore = useCallback(() => {
     if (!loading && hasMore) {

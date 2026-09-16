@@ -194,7 +194,6 @@ export function RegisterContent() {
                 <Label>Register as</Label>
                 <Select
                   value={role}
-                  onChange={(e) => router.push(`/auth/register?role=${e.target.value}`)}
                   disabled
                 >
                   <option value="patient">Patient</option>
@@ -216,9 +215,9 @@ export function RegisterContent() {
                 />
                 <Label htmlFor="terms" className="text-sm text-secondary-600 mt-0.5">
                   I agree to the{' '}
-                  <Link href="/terms" className="text-primary-600 hover:underline">Terms of Service</Link>{' '}
+                  <Link href="/about" className="text-primary-600 hover:underline">Terms of Service</Link>{' '}
                   and{' '}
-                  <Link href="/privacy" className="text-primary-600 hover:underline">Privacy Policy</Link>
+                  <Link href="/about" className="text-primary-600 hover:underline">Privacy Policy</Link>
                 </Label>
               </div>
 

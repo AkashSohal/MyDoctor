@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/utils/supabase/client'
+import { useAuth } from '@/lib/hooks/useAuth'
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 
 type UpdatePasswordForm = {
@@ -18,6 +19,7 @@ type UpdatePasswordForm = {
 
 export function UpdatePasswordContent() {
   const router = useRouter()
+  const { user } = useAuth()
   const [error, setError] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [showPassword, setShowPassword] = React.useState(false)
@@ -42,8 +44,9 @@ export function UpdatePasswordContent() {
     } else {
       setSuccess(true)
       setLoading(false)
+      const redirectPath = user?.role === 'admin' ? '/dashboard/admin' : user?.role === 'doctor' ? '/dashboard/doctor' : '/dashboard/patient'
       setTimeout(() => {
-        router.push('/dashboard/patient')
+        router.push(redirectPath)
       }, 2000)
     }
   }
