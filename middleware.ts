@@ -38,9 +38,9 @@ export async function middleware(request: NextRequest) {
 
   // Protected routes
   const protectedRoutes = [
-    "/patient/dashboard",
-    "/doctor/dashboard",
-    "/admin/dashboard",
+    "/dashboard/patient",
+    "/dashboard/doctor",
+    "/dashboard/admin",
   ];
 
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -66,13 +66,13 @@ export async function middleware(request: NextRequest) {
         .single();
 
       if (profile) {
-        if (pathname.startsWith("/admin/") && profile.role !== "admin") {
+        if (pathname.startsWith("/dashboard/admin") && profile.role !== "admin") {
           return NextResponse.redirect(new URL("/", request.url));
         }
-        if (pathname.startsWith("/doctor/") && profile.role !== "doctor") {
+        if (pathname.startsWith("/dashboard/doctor") && profile.role !== "doctor") {
           return NextResponse.redirect(new URL("/", request.url));
         }
-        if (pathname.startsWith("/patient/") && profile.role !== "patient") {
+        if (pathname.startsWith("/dashboard/patient") && profile.role !== "patient") {
           return NextResponse.redirect(new URL("/", request.url));
         }
       }
@@ -112,9 +112,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/patient/dashboard/:path*",
-    "/doctor/dashboard/:path*",
-    "/admin/dashboard/:path*",
     "/dashboard/patient/:path*",
     "/dashboard/doctor/:path*",
     "/dashboard/admin/:path*",

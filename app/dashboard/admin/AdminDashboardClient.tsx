@@ -2,17 +2,16 @@
 
 import * as React from 'react'
 import Link from 'next/link'
-import { formatDate, formatTime, cn } from '@/lib/utils'
+import { useRouter } from 'next/navigation'
+import { createClient } from '@/utils/supabase/client'
+import { formatDate, formatTime } from '@/lib/utils'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { 
-  Users, Stethoscope, Calendar, Clock, Star, AlertCircle, 
-  CheckCircle, XCircle, Shield, Building2, Search, 
-  Plus, Edit, Trash2, Eye, MoreHorizontal
+import { DoctorVerificationBadge, AppointmentStatusBadge } from '@/components/admin/AdminStatusBadges'
+import {
+  Users, Stethoscope, Calendar, Clock, Star, AlertCircle,
+  CheckCircle, XCircle, Eye, ArrowRight
 } from 'lucide-react'
 
 interface AdminDashboardClientProps {
@@ -44,38 +43,47 @@ interface AdminDashboardClientProps {
 
 export function AdminDashboardClient({ stats, recentDoctors, recentAppointments }: AdminDashboardClientProps) {
   const [activeTab, setActiveTab] = React.useState('overview')
+  const [doctors, setDoctors] = React.useState(recentDoctors)
+  const [updatingId, setUpdatingId] = React.useState<string | null>(null)
+  const router = useRouter()
+  const supabase = createClient()
 
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      pending: <Badge variant="warning">Pending</Badge>,
-      verified: <Badge variant="success">Verified</Badge>,
-      rejected: <Badge variant="danger">Rejected</Badge>,
-      suspended: <Badge variant="outline">Suspended</Badge>,
+  const handleVerify = async (doctorId: string) => {
+    setUpdatingId(doctorId)
+    const { error } = await supabase
+      .from('doctors')
+      .update({ verification_status: 'verified' })
+      .eq('id', doctorId)
+    if (!error) {
+      setDoctors(prev => prev.map(d =>
+        d.id === doctorId ? { ...d, verification_status: 'verified' } : d
+      ))
     }
-    return badges[status as keyof typeof badges] || <Badge>{status}</Badge>
+    setUpdatingId(null)
   }
 
-  const getAppointmentStatusBadge = (status: string) => {
-    const badges = {
-      pending: <Badge variant="warning">Pending</Badge>,
-      confirmed: <Badge variant="success">Confirmed</Badge>,
-      cancelled: <Badge variant="danger">Cancelled</Badge>,
-      completed: <Badge variant="default">Completed</Badge>,
-      rejected: <Badge variant="danger">Rejected</Badge>,
+  const handleReject = async (doctorId: string) => {
+    setUpdatingId(doctorId)
+    const { error } = await supabase
+      .from('doctors')
+      .update({ verification_status: 'rejected' })
+      .eq('id', doctorId)
+    if (!error) {
+      setDoctors(prev => prev.map(d =>
+        d.id === doctorId ? { ...d, verification_status: 'rejected' } : d
+      ))
     }
-    return badges[status as keyof typeof badges] || <Badge>{status}</Badge>
+    setUpdatingId(null)
   }
 
   return (
     <div className="min-h-screen bg-secondary-50">
-      {/* Header */}
       <div className="bg-white border-b border-secondary-200">
         <div className="container py-6">
           <h1 className="text-2xl font-bold text-secondary-900">Admin Dashboard</h1>
         </div>
       </div>
 
-      {/* Stats */}
       <div className="container py-6">
         <div className="grid grid-cols-2 lg:grid-cols-6 gap-4 mb-8">
           <Card>
@@ -163,7 +171,6 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
           </Card>
         </div>
 
-        {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -178,16 +185,14 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Recent Doctor Registrations</CardTitle>
-                  <Link href="/admin/doctors">
-                    <Button variant="ghost" size="sm">View All</Button>
-                  </Link>
+                  <Button variant="ghost" size="sm" onClick={() => setActiveTab('doctors')}>View All</Button>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {recentDoctors.length === 0 ? (
+                    {doctors.length === 0 ? (
                       <p className="text-secondary-500 text-center py-4">No doctors yet</p>
                     ) : (
-                      recentDoctors.map((doctor) => (
+                      doctors.map((doctor) => (
                         <div key={doctor.id} className="flex items-center justify-between p-3 bg-secondary-50 rounded-lg">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center">
@@ -199,9 +204,9 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                             </div>
                           </div>
                           <div className="flex items-center gap-2">
-                            {getStatusBadge(doctor.verification_status)}
+                            <DoctorVerificationBadge status={doctor.verification_status} />
                             {doctor.verification_status === 'pending' && (
-                              <Button variant="outline" size="sm" onClick={() => {}}>
+                              <Button variant="ghost" size="sm" onClick={() => setActiveTab('doctors')}>
                                 Review
                               </Button>
                             )}
@@ -217,7 +222,7 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle>Recent Appointments</CardTitle>
                   <Link href="/admin/appointments">
-                    <Button variant="ghost" size="sm">View All</Button>
+                    <Button variant="ghost" size="sm">View All <ArrowRight className="h-4 w-4 ml-1" /></Button>
                   </Link>
                 </CardHeader>
                 <CardContent>
@@ -238,9 +243,7 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                               </p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            {getAppointmentStatusBadge(apt.status)}
-                          </div>
+                          <AppointmentStatusBadge status={apt.status} />
                         </div>
                       ))
                     )}
@@ -254,15 +257,6 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Doctor Verification Queue</CardTitle>
-                <div className="flex gap-2">
-                  <Input placeholder="Search doctors..." className="w-64" />
-                  <Select placeholder="All Status">
-                    <option value="all">All</option>
-                    <option value="pending">Pending</option>
-                    <option value="verified">Verified</option>
-                    <option value="rejected">Rejected</option>
-                  </Select>
-                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -272,13 +266,11 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                         <th className="text-left p-3 font-medium text-secondary-600">Doctor</th>
                         <th className="text-left p-3 font-medium text-secondary-600">Specialty</th>
                         <th className="text-left p-3 font-medium text-secondary-600">Status</th>
-                        <th className="text-left p-3 font-medium text-secondary-600">Registration</th>
-                        <th className="text-left p-3 font-medium text-secondary-600">Applied</th>
                         <th className="text-right p-3 font-medium text-secondary-600">Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {recentDoctors.map((doctor) => (
+                      {doctors.map((doctor) => (
                         <tr key={doctor.id} className="border-b border-secondary-100 hover:bg-secondary-50">
                           <td className="p-3">
                             <div className="flex items-center gap-3">
@@ -292,24 +284,31 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                             </div>
                           </td>
                           <td className="p-3">{doctor.specialization?.name || '-'}</td>
-                          <td className="p-3">{getStatusBadge(doctor.verification_status)}</td>
-                          <td className="p-3 text-sm text-secondary-600">REG-{doctor.id.slice(0, 8)}</td>
-                          <td className="p-3 text-sm text-secondary-600">{formatDate(doctor.created_at)}</td>
+                          <td className="p-3"><DoctorVerificationBadge status={doctor.verification_status} /></td>
                           <td className="p-3 text-right">
                             <div className="flex items-center justify-end gap-2">
                               {doctor.verification_status === 'pending' && (
                                 <>
-                                  <Button size="sm" variant="success" onClick={() => {}}>
+                                  <Button
+                                    size="sm"
+                                    variant="success"
+                                    onClick={() => handleVerify(doctor.id)}
+                                    disabled={updatingId === doctor.id}
+                                  >
                                     <CheckCircle className="h-4 w-4 mr-1" />
-                                    Approve
+                                    {updatingId === doctor.id ? '...' : 'Approve'}
                                   </Button>
-                                  <Button size="sm" variant="destructive" onClick={() => {}}>
+                                  <Button
+                                    size="sm"
+                                    variant="destructive"
+                                    onClick={() => handleReject(doctor.id)}
+                                    disabled={updatingId === doctor.id}
+                                  >
                                     <XCircle className="h-4 w-4 mr-1" />
-                                    Reject
+                                    {updatingId === doctor.id ? '...' : 'Reject'}
                                   </Button>
                                 </>
                               )}
-                              <Button variant="ghost" size="sm"><Eye className="h-4 w-4" /></Button>
                             </div>
                           </td>
                         </tr>
@@ -323,28 +322,52 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
 
           <TabsContent value="reviews" className="mt-6">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Review Moderation</CardTitle>
+                <Link href="/admin/reviews">
+                  <Button variant="ghost" size="sm">Manage Reviews <ArrowRight className="h-4 w-4 ml-1" /></Button>
+                </Link>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <Badge variant="warning">Pending Moderation: {stats.pendingReviews}</Badge>
-                    <Badge variant="danger">Reported: {stats.reportedReviews}</Badge>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="p-4 bg-amber-50 rounded-lg">
+                    <p className="text-2xl font-bold text-amber-700">{stats.pendingReviews}</p>
+                    <p className="text-sm text-amber-600">Pending Moderation</p>
                   </div>
-                  <p className="text-secondary-500">Review moderation interface would go here.</p>
+                  <div className="p-4 bg-red-50 rounded-lg">
+                    <p className="text-2xl font-bold text-red-700">{stats.reportedReviews}</p>
+                    <p className="text-sm text-red-600">Reported Reviews</p>
+                  </div>
                 </div>
+                <p className="text-secondary-500 mt-4">Review and moderate patient reviews. Approve, hide, or resolve reports.</p>
               </CardContent>
             </Card>
           </TabsContent>
 
           <TabsContent value="appointments" className="mt-6">
             <Card>
-              <CardHeader>
-                <CardTitle>All Appointments</CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Appointment Management</CardTitle>
+                <Link href="/admin/appointments">
+                  <Button variant="ghost" size="sm">Manage Appointments <ArrowRight className="h-4 w-4 ml-1" /></Button>
+                </Link>
               </CardHeader>
               <CardContent>
-                <p className="text-secondary-500">Appointment management interface would go here.</p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="p-4 bg-blue-50 rounded-lg">
+                    <p className="text-2xl font-bold text-blue-700">{stats.totalAppointments}</p>
+                    <p className="text-sm text-blue-600">Total</p>
+                  </div>
+                  <div className="p-4 bg-amber-50 rounded-lg">
+                    <p className="text-2xl font-bold text-amber-700">{recentAppointments.filter(a => a.status === 'pending').length}</p>
+                    <p className="text-sm text-amber-600">Pending</p>
+                  </div>
+                  <div className="p-4 bg-green-50 rounded-lg">
+                    <p className="text-2xl font-bold text-green-700">{recentAppointments.filter(a => a.status === 'confirmed').length}</p>
+                    <p className="text-sm text-green-600">Confirmed</p>
+                  </div>
+                </div>
+                <p className="text-secondary-500 mt-4">View and manage all appointments. Cancel, confirm, or mark as completed.</p>
               </CardContent>
             </Card>
           </TabsContent>
@@ -356,13 +379,6 @@ export function AdminDashboardClient({ stats, recentDoctors, recentAppointments 
                   <CardTitle>Platform Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h4 className="font-medium">Match Score Weights</h4>
-                      <p className="text-sm text-secondary-500">Configure algorithm weighting</p>
-                    </div>
-                    <Button variant="outline">Configure</Button>
-                  </div>
                   <div className="flex items-center justify-between">
                     <div>
                       <h4 className="font-medium">Specialties Management</h4>

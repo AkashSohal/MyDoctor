@@ -86,7 +86,7 @@ export function Header() {
                   <DropdownMenuSeparator />
                   {user.role === 'doctor' && (
                     <DropdownMenuItem asChild>
-                      <Link href="/doctor/dashboard" className="flex w-full items-center">
+                      <Link href="/dashboard/doctor" className="flex w-full items-center">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Doctor Dashboard
                       </Link>
@@ -94,7 +94,7 @@ export function Header() {
                   )}
                   {user.role === 'patient' && (
                     <DropdownMenuItem asChild>
-                      <Link href="/patient/dashboard" className="flex w-full items-center">
+                      <Link href="/dashboard/patient" className="flex w-full items-center">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Patient Dashboard
                       </Link>
@@ -102,7 +102,7 @@ export function Header() {
                   )}
                   {user.role === 'admin' && (
                     <DropdownMenuItem asChild>
-                      <Link href="/admin/dashboard" className="flex w-full items-center">
+                      <Link href="/dashboard/admin" className="flex w-full items-center">
                         <LayoutDashboard className="mr-2 h-4 w-4" />
                         Admin Dashboard
                       </Link>
@@ -175,7 +175,7 @@ export function Header() {
               <>
                 {user.role === 'doctor' && (
                   <Link
-                    href="/doctor/dashboard"
+                    href="/dashboard/doctor"
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium text-secondary-600 hover:bg-secondary-50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -185,7 +185,7 @@ export function Header() {
                 )}
                 {user.role === 'patient' && (
                   <Link
-                    href="/patient/dashboard"
+                    href="/dashboard/patient"
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium text-secondary-600 hover:bg-secondary-50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
@@ -195,7 +195,7 @@ export function Header() {
                 )}
                 {user.role === 'admin' && (
                   <Link
-                    href="/admin/dashboard"
+                    href="/dashboard/admin"
                     className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-base font-medium text-secondary-600 hover:bg-secondary-50"
                     onClick={() => setMobileMenuOpen(false)}
                   >
