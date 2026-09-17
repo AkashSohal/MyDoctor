@@ -94,7 +94,7 @@ export function PatientDashboardClient({
                   Find Doctors
                 </Button>
               </Link>
-              <Link href="/patient/settings">
+              <Link href="/dashboard/patient?tab=settings">
                 <Button variant="ghost" size="sm">
                   <Settings className="h-4 w-4" />
                 </Button>

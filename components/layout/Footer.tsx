@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { cn } from '@/lib/utils'
-import { Stethoscope, Heart, Shield, MapPin, Phone, Mail, Facebook, Twitter, Instagram, Linkedin } from 'lucide-react'
+import { Stethoscope, Heart, Shield, MapPin, Phone, Mail, Globe, MessageSquare, Share2, Briefcase } from 'lucide-react'
 
 const footerLinks = {
   product: [
@@ -33,10 +33,10 @@ const footerLinks = {
 }
 
 const socialLinks = [
-  { name: 'Facebook', href: '#', icon: Facebook },
-  { name: 'Twitter', href: '#', icon: Twitter },
-  { name: 'Instagram', href: '#', icon: Instagram },
-  { name: 'LinkedIn', href: '#', icon: Linkedin },
+  { name: 'Website', href: '#', icon: Globe },
+  { name: 'Message', href: '#', icon: MessageSquare },
+  { name: 'Share', href: '#', icon: Share2 },
+  { name: 'LinkedIn', href: '#', icon: Briefcase },
 ]
 
 export function Footer() {

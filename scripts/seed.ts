@@ -16,15 +16,14 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 async function seed() {
   console.log('🌱 Starting MediNear seed...')
 
-  // Get all users once
-  const { data: { users: allUsers } } = await supabase.auth.admin.listUsers()
-
   // Create demo users
   const demoUsers = [
     { email: 'patient@demo.com', password: 'demo123', full_name: 'Demo Patient', role: 'patient' },
     { email: 'doctor@demo.com', password: 'demo123', full_name: 'Dr. Demo Doctor', role: 'doctor' },
     { email: 'admin@demo.com', password: 'demo123', full_name: 'Admin User', role: 'admin' },
   ]
+
+  const createdUserIds: Record<string, string> = {}
 
   for (const user of demoUsers) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
@@ -38,17 +37,22 @@ async function seed() {
       console.error(`Error creating user ${user.email}:`, authError)
     } else if (authData.user) {
       console.log(`✅ Created user: ${user.email} (${user.role})`)
+      createdUserIds[user.email] = authData.user.id
     }
   }
 
-  // Create doctor profile for demo doctor
-  const doctorUser = allUsers.find(u => u.email === 'doctor@demo.com')
+  // Fetch all users (including any already existing) to get IDs
+  const { data: { users: allUsers } } = await supabase.auth.admin.listUsers()
+  const getUserEmail = (email: string) => createdUserIds[email] || allUsers.find(u => u.email === email)?.id
+
+  // Create demo doctor profile
+  const doctorUserId = getUserEmail('doctor@demo.com')
   
-  if (doctorUser) {
+  if (doctorUserId) {
     const { error: doctorError } = await supabase
       .from('doctors')
       .upsert({
-        user_id: doctorUser.id,
+        user_id: doctorUserId,
         full_name: 'Dr. Rahul Sharma',
         photo_url: null,
         qualifications: ['MBBS', 'MD (General Medicine)'],
@@ -161,15 +165,28 @@ async function seed() {
     }
   }
 
+  // Create demo hospitals
+  const demoHospitals = [
+    { name: 'City General Hospital', address: '45 MG Road, Bangalore', latitude: 12.9716, longitude: 77.5946, phone: '+91-80-12345678', email: 'info@citygeneral.in' },
+    { name: 'Apollo Hospital', address: 'Bannerghatta Road, Bangalore', latitude: 12.9352, longitude: 77.6245, phone: '+91-80-23456789', email: 'info@apollo.in' },
+    { name: 'Manipal Hospital', address: 'Old Airport Road, Bangalore', latitude: 12.9592, longitude: 77.6372, phone: '+91-80-34567890', email: 'info@manipal.in' },
+    { name: 'Narayana Health', address: 'Hosur Road, Bangalore', latitude: 12.8132, longitude: 77.6598, phone: '+91-80-45678901', email: 'info@narayana.in' },
+    { name: 'Columbia Asia Hospital', address: 'Malleswaram, Bangalore', latitude: 13.0067, longitude: 77.5594, phone: '+91-80-56789012', email: 'info@columbia.in' },
+  ]
+
+  for (const hospital of demoHospitals) {
+    await supabase.from('hospitals').upsert(hospital, { onConflict: 'name' })
+  }
+  console.log('✅ Created demo hospitals')
+
   // Create doctor-hospital relationships
   const { data: allDoctors } = await supabase.from('doctors').select('id')
   const { data: allHospitals } = await supabase.from('hospitals').select('id')
 
   if (allDoctors && allHospitals) {
     for (const doctor of allDoctors) {
-      // Assign 1-3 random hospitals
       const numHospitals = Math.floor(Math.random() * 3) + 1
-      const shuffled = allHospitals.sort(() => 0.5 - Math.random())
+      const shuffled = [...allHospitals].sort(() => 0.5 - Math.random())
       const selected = shuffled.slice(0, numHospitals)
 
       for (const hospital of selected) {
@@ -198,7 +215,7 @@ async function seed() {
     if (docHospitals) {
       for (const dh of docHospitals) {
         // Add 2-4 days of availability
-        const availableDays = days.sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 2)
+        const availableDays = [...days].sort(() => 0.5 - Math.random()).slice(0, Math.floor(Math.random() * 3) + 2)
         
         for (const day of availableDays) {
           const slot = timeSlots[Math.floor(Math.random() * timeSlots.length)]
@@ -219,22 +236,21 @@ async function seed() {
   console.log('✅ Created doctor availability')
 
   // Create demo reviews
-  const patientUser = allUsers.find(u => u.email === 'patient@demo.com')
+  const patientUserId = getUserEmail('patient@demo.com')
   const { data: verifiedDoctors } = await supabase
     .from('doctors')
     .select('id')
     .eq('verification_status', 'verified')
     .limit(5)
 
-  if (patientUser && verifiedDoctors) {
+  if (patientUserId && verifiedDoctors) {
     for (const doc of verifiedDoctors) {
-      // Create completed appointment first
       const { data: appointment } = await supabase
         .from('appointments')
         .insert({
           doctor_id: doc.id,
           hospital_id: (await supabase.from('doctor_hospitals').select('hospital_id').eq('doctor_id', doc.id).single()).data?.hospital_id || allHospitals?.[0]?.id,
-          patient_id: patientUser.id,
+          patient_id: patientUserId,
           appointment_date: new Date(Date.now() - 86400000 * Math.floor(Math.random() * 30)).toISOString().split('T')[0],
           appointment_time: '10:00',
           status: 'completed',
@@ -247,7 +263,7 @@ async function seed() {
           .from('reviews')
           .insert({
             doctor_id: doc.id,
-patient_id: patientUser.id,
+            patient_id: patientUserId,
             appointment_id: appointment.id,
             rating: Math.floor(Math.random() * 2) + 4, // 4-5 stars
             communication_rating: Math.floor(Math.random() * 2) + 4,

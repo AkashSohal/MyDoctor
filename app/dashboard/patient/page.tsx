@@ -15,16 +15,16 @@ export default async function PatientDashboardPage() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user }, error } = await supabase.auth.getUser()
   
-  if (!session) {
+  if (error || !user) {
     redirect('/auth/login?redirect=/dashboard/patient')
   }
 
   const { data: profile } = await supabase
     .from('users')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   if (profile?.role !== 'patient') {
@@ -45,7 +45,7 @@ export default async function PatientDashboardPage() {
         doctor:doctors(full_name, photo_url, specialization:specialties(name), consultation_fee),
         hospital:hospitals(name, address)
       `)
-      .eq('patient_id', session.user.id)
+      .eq('patient_id', user.id)
       .in('status', ['pending', 'confirmed'])
       .gte('appointment_date', new Date().toISOString().split('T')[0])
       .order('appointment_date', { ascending: true })
@@ -58,7 +58,7 @@ export default async function PatientDashboardPage() {
         doctor:doctors(full_name, photo_url, specialization:specialties(name)),
         hospital:hospitals(name, address)
       `)
-      .eq('patient_id', session.user.id)
+      .eq('patient_id', user.id)
       .in('status', ['completed', 'cancelled', 'rejected'])
       .order('appointment_date', { ascending: false })
       .limit(5),
@@ -71,7 +71,7 @@ export default async function PatientDashboardPage() {
           verification_status, distance_km
         )
       `)
-      .eq('patient_id', session.user.id)
+      .eq('patient_id', user.id)
       .limit(5),
     supabase
       .from('reviews')
@@ -79,21 +79,22 @@ export default async function PatientDashboardPage() {
         *,
         doctor:doctors(full_name, specialization:specialties(name))
       `)
-      .eq('patient_id', session.user.id)
+      .eq('patient_id', user.id)
       .order('created_at', { ascending: false })
       .limit(5),
   ])
 
   return (
     <PatientDashboardClient
-      user={session.user}
+      user={user}
       upcomingAppointments={upcomingAppointments || []}
       pastAppointments={pastAppointments || []}
       savedDoctors={(savedDoctors || []).map((s: any) => {
         const doc = s.doctor
+        if (!doc) return null
         return {
           ...doc,
-          specialization: doc.specialization?.[0] ? { name: doc.specialization[0].name } : null,
+          specialization: doc.specialization ? { name: doc.specialization.name } : null,
         }
       }).filter(Boolean)}
       reviews={reviews || []}

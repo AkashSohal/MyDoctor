@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { MapPin, Clock, Calendar, Stethoscope, Heart, Building2, Shield, CheckCircle, Star, MapPin as MapPinIcon, Phone, Mail, ExternalLink, ArrowRight, Award, Languages, GraduationCap, Briefcase, Info, AlertCircle } from 'lucide-react'
+import { MapPin, Clock, Calendar, Stethoscope, Heart, Building2, Shield, CheckCircle, Star, Phone, Mail, ExternalLink, ArrowRight, Award, Languages, GraduationCap, Briefcase, Info, AlertCircle } from 'lucide-react'
 import { Doctor } from '@/lib/types'
 import { MapView } from '@/components/map/MapView'
 
@@ -129,11 +129,25 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
               <Button size="lg" onClick={() => router.push(`/appointments/new?doctor=${doctor.id}`)} className="w-full lg:w-auto">
                 Book Appointment
               </Button>
-              <Button size="lg" variant="outline" onClick={() => window.open(`https://maps.google.com/?daddr=${doctor.latitude},${doctor.longitude}`, '_blank')}>
-                <MapPinIcon className="mr-2 h-4 w-4" />
+              <Button 
+                size="lg" 
+                variant="outline" 
+                disabled={!doctor.latitude || !doctor.longitude}
+                onClick={() => window.open(`https://maps.google.com/?daddr=${doctor.latitude},${doctor.longitude}`, '_blank')}
+              >
+                <MapPin className="mr-2 h-4 w-4" />
                 Get Directions
               </Button>
-              <Button size="lg" variant="ghost" onClick={() => window.open(`tel:+91${doctor.hospitals?.[0]?.phone || ''}`, '_self')}>
+              <Button 
+                size="lg" 
+                variant="ghost" 
+                disabled={!doctor.hospitals?.[0]?.phone}
+                onClick={() => {
+                  const phone = doctor.hospitals?.[0]?.phone || ''
+                  const formattedPhone = phone.startsWith('+') ? phone : `+91${phone}`
+                  window.open(`tel:${formattedPhone}`, '_self')
+                }}
+              >
                 <Phone className="mr-2 h-4 w-4" />
                 Call
               </Button>
@@ -242,7 +256,7 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                     <li className="flex items-start gap-3">
                       <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                       <span className="text-secondary-700">
-                        {doctor.rating_average.toFixed(1)} rating from {doctor.rating_count} verified patients
+                        {(doctor.rating_average || 0).toFixed(1)} rating from {doctor.rating_count} verified patients
                       </span>
                     </li>
                   )}
@@ -343,7 +357,7 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                         View Schedule
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => window.open(`https://maps.google.com/?daddr=${hospital.latitude},${hospital.longitude}`, '_blank')}>
-                        <MapPinIcon className="mr-1.5 h-4 w-4" />
+                        <MapPin className="mr-1.5 h-4 w-4" />
                         Directions
                       </Button>
                       {hospital.website && (
@@ -401,22 +415,22 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
               <CardContent className="p-6">
                 <div className="flex flex-col md:flex-row gap-8">
                   <div className="flex flex-col items-center md:items-start text-center md:text-left">
-                    <div className="text-5xl font-bold text-secondary-900">{doctor.rating_average.toFixed(1)}</div>
+                    <div className="text-5xl font-bold text-secondary-900">{(doctor.rating_average || 0).toFixed(1)}</div>
                     <RatingStars rating={doctor.rating_average} size="lg" maxRating={5} />
                     <p className="text-secondary-500 mt-1">{doctor.rating_count} verified reviews</p>
                   </div>
                   
                   <div className="flex-1 space-y-3">
-                    {['Communication', 'Professionalism', 'Waiting Time', 'Overall Experience'].map((category, i) => (
+                    {['Communication', 'Professionalism', 'Waiting Time', 'Overall Experience'].map((category) => (
                       <div key={category}>
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-secondary-600">{category}</span>
-                          <span className="font-medium text-secondary-900">{(doctor.rating_average - i * 0.1).toFixed(1)}</span>
+                          <span className="font-medium text-secondary-900">{(doctor.rating_average || 0).toFixed(1)}</span>
                         </div>
                         <div className="h-2 bg-secondary-200 rounded-full overflow-hidden">
                           <div 
                             className="h-full bg-primary-600 rounded-full transition-all"
-                            style={{ width: `${Math.max(0, (doctor.rating_average - i * 0.1) / 5 * 100)}%` }}
+                            style={{ width: `${Math.max(0, Math.min(100, (doctor.rating_average || 0) / 5 * 100))}%` }}
                           />
                         </div>
                       </div>

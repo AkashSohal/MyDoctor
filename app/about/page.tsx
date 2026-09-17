@@ -71,7 +71,7 @@ export default function AboutPage() {
               <Link href="/doctors">
                 <Button size="lg">Find a Doctor</Button>
               </Link>
-              <Link href="/doctor/register">
+              <Link href="/doctor/onboarding">
                 <Button size="lg" variant="outline">Join as a Doctor</Button>
               </Link>
             </div>
@@ -191,7 +191,7 @@ export default function AboutPage() {
                 Find Doctors Now
               </Button>
             </Link>
-            <Link href="/doctor/register">
+            <Link href="/doctor/onboarding">
               <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-primary-700 px-8">
                 Are You a Doctor?
               </Button>

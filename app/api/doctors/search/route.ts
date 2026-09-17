@@ -35,7 +35,6 @@ export async function GET(request: NextRequest) {
       .select(`
         *,
         specialization:specialties(name),
-        hospitals:hospitals(id, name, address, latitude, longitude, distance_km),
         availability(*)
       `)
       .eq('verification_status', 'verified')
@@ -43,11 +42,6 @@ export async function GET(request: NextRequest) {
     // Add specialty filter
     if (specialty) {
       query = query.eq('specialization_id', specialty)
-    }
-
-    // Add distance filter
-    if (distance) {
-      query = query.lte('distance_km', parseFloat(distance))
     }
 
     // Add rating filter
@@ -125,8 +119,21 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Fetch hospitals for each doctor
+    const doctorIds = doctors?.map(d => d.id) || []
+    const { data: doctorHospitals } = await supabase
+      .from('doctor_hospitals')
+      .select('doctor_id, hospital:hospitals(id, name, address, latitude, longitude, phone)')
+      .in('doctor_id', doctorIds)
+
+    // Attach hospitals to doctors
+    const doctorsWithHospitals = doctors?.map(doctor => ({
+      ...doctor,
+      hospitals: doctorHospitals?.filter(dh => dh.doctor_id === doctor.id).map(dh => dh.hospital) || []
+    })) || []
+
     // Calculate distances if not already present
-    const doctorsWithDistance = doctors?.map(doctor => {
+    const doctorsWithDistance = doctorsWithHospitals.map(doctor => {
       if (doctor.latitude && doctor.longitude) {
         const R = 6371
         const dLat = ((doctor.latitude - lat) * Math.PI) / 180
@@ -135,19 +142,22 @@ export async function GET(request: NextRequest) {
           Math.cos((lat * Math.PI) / 180) * Math.cos((doctor.latitude * Math.PI) / 180) *
           Math.sin(dLng/2) * Math.sin(dLng/2)
         const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
-        const distance = R * c
-        return { ...doctor, distance_km: Math.round(distance * 10) / 10 }
+        const dist = R * c
+        return { ...doctor, distance_km: Math.round(dist * 10) / 10 }
       }
       return doctor
-    }) || []
+    })
 
-    // Filter by availability if needed
+    // Apply distance filter after computation
     let filteredDoctors = doctorsWithDistance
+    if (distance) {
+      filteredDoctors = filteredDoctors.filter(d => d.distance_km && d.distance_km <= parseFloat(distance))
+    }
     const today = new Date().getDay()
     const currentTime = new Date().toTimeString().slice(0, 5)
 
     if (availableToday || availableNow) {
-      filteredDoctors = doctorsWithDistance.filter(doctor => {
+      filteredDoctors = filteredDoctors.filter(doctor => {
         const hasAvailability = doctor.availability?.some((a: any) => 
           a.day_of_week === today && a.is_active
         )

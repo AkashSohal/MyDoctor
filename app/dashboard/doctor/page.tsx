@@ -15,16 +15,16 @@ export default async function DoctorDashboardPage() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user }, error } = await supabase.auth.getUser()
   
-  if (!session) {
+  if (error || !user) {
     redirect('/auth/login?redirect=/dashboard/doctor')
   }
 
   const { data: profile } = await supabase
     .from('users')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   if (profile?.role !== 'doctor') {
@@ -34,11 +34,11 @@ export default async function DoctorDashboardPage() {
   const { data: doctor } = await supabase
     .from('doctors')
     .select('*')
-    .eq('user_id', session.user.id)
+    .eq('user_id', user.id)
     .single()
 
   if (!doctor) {
-    redirect('/doctor/register')
+    redirect('/doctor/onboarding')
   }
 
   const [

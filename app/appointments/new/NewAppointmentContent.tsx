@@ -54,7 +54,6 @@ export function NewAppointmentContent() {
       .select(`
         *,
         specialization:specialties(name),
-        hospitals:hospitals(id, name, address, latitude, longitude),
         availability(*)
       `)
       .eq('id', doctorId)
@@ -62,11 +61,19 @@ export function NewAppointmentContent() {
       .single()
 
     if (data) {
+      // Fetch hospitals via junction table
+      const { data: doctorHospitals } = await supabase
+        .from('doctor_hospitals')
+        .select('hospital:hospitals(id, name, address, latitude, longitude)')
+        .eq('doctor_id', doctorId)
+
+      const hospitalsList = (doctorHospitals?.map(dh => dh.hospital).filter(Boolean) || []) as unknown as Hospital[]
+      
       setDoctor(data)
-      setHospitals(data.hospitals || [])
+      setHospitals(hospitalsList)
       setAvailability(data.availability || [])
-      if (data.hospitals?.[0]) {
-        setSelectedHospital(data.hospitals[0].id)
+      if (hospitalsList[0]) {
+        setSelectedHospital(hospitalsList[0].id)
       }
     }
   }
@@ -102,7 +109,7 @@ export function NewAppointmentContent() {
     if (error) {
       alert('Failed to book appointment: ' + error.message)
     } else {
-      router.push('/patient/dashboard')
+      setStep(6)
     }
     setLoading(false)
   }
@@ -462,7 +469,7 @@ export function NewAppointmentContent() {
                     You'll receive a confirmation via SMS and email.
                   </p>
                   <div className="flex gap-3 justify-center">
-                    <Link href="/patient/dashboard">
+                    <Link href="/dashboard/patient">
                       <Button size="lg">View Dashboard</Button>
                     </Link>
                     <Link href="/doctors">

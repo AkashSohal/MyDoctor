@@ -17,6 +17,9 @@ interface GeolocationState {
 }
 
 export function useGeolocation(options: UseGeolocationOptions = {}) {
+  const optionsRef = useRef(options)
+  optionsRef.current = options
+
   const [state, setState] = useState<GeolocationState>({
     latitude: null,
     longitude: null,
@@ -56,9 +59,9 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           loading: false,
         }))
       },
-      options
+      optionsRef.current
     )
-  }, [options])
+  }, [])
 
   const watchPosition = useCallback(() => {
     if (!navigator.geolocation) {
@@ -88,9 +91,9 @@ export function useGeolocation(options: UseGeolocationOptions = {}) {
           loading: false,
         }))
       },
-      options
+      optionsRef.current
     )
-  }, [options])
+  }, [])
 
   const clearWatch = useCallback(() => {
     if (watchIdRef.current !== null) {

@@ -305,7 +305,7 @@ export function DoctorDashboardClient({
                 <CardContent>
                   <div className="flex items-center gap-8">
                     <div className="text-center">
-                      <p className="text-4xl font-bold text-secondary-900">{doctor.rating_average.toFixed(1)}</p>
+                      <p className="text-4xl font-bold text-secondary-900">{(doctor.rating_average || 0).toFixed(1)}</p>
                       <RatingStars rating={doctor.rating_average} />
                     </div>
                     <div className="flex-1 space-y-2">

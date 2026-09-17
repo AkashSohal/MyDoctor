@@ -15,16 +15,16 @@ export default async function AdminDashboardPage() {
   const cookieStore = await cookies()
   const supabase = createClient(cookieStore)
   
-  const { data: { session } } = await supabase.auth.getSession()
+  const { data: { user }, error } = await supabase.auth.getUser()
   
-  if (!session) {
+  if (error || !user) {
     redirect('/auth/login?redirect=/dashboard/admin')
   }
 
   const { data: profile } = await supabase
     .from('users')
     .select('role')
-    .eq('id', session.user.id)
+    .eq('id', user.id)
     .single()
 
   if (profile?.role !== 'admin') {
@@ -82,8 +82,8 @@ export default async function AdminDashboardPage() {
       recentDoctors={transformedDoctors}
       recentAppointments={(recentAppointments || []).map((a: any) => ({
         ...a,
-        doctor: a.doctor?.[0] ? { full_name: a.doctor[0].full_name } : null,
-        patient: a.patient?.[0] ? { full_name: a.patient[0].full_name } : null,
+        doctor: a.doctor ? { full_name: a.doctor.full_name } : null,
+        patient: a.patient ? { full_name: a.patient.full_name } : null,
       }))}
     />
   )

@@ -58,7 +58,7 @@ export function RegisterContent() {
       if (data.role === 'doctor') {
         router.push('/doctor/onboarding')
       } else {
-        router.push('/auth/verify-email')
+        router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`)
       }
       router.refresh()
     }

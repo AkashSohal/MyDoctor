@@ -53,16 +53,13 @@ export function DoctorsPageContent() {
   const [hospitals, setHospitals] = React.useState<Array<{ id: string; name: string }>>([])
 
   React.useEffect(() => {
-    fetch('/api/doctors/search?per_page=1')
-      .then(() => {
-        // Fetch hospitals from Supabase
-        const { createClient } = require('@/utils/supabase/client')
-        const supabase = createClient()
-        supabase.from('hospitals').select('id, name').order('name').then(({ data }: any) => {
-          if (data) setHospitals(data)
-        })
-      })
-      .catch(() => {})
+    const fetchHospitals = async () => {
+      const { createClient } = await import('@/utils/supabase/client')
+      const supabase = createClient()
+      const { data } = await supabase.from('hospitals').select('id, name').order('name')
+      if (data) setHospitals(data)
+    }
+    fetchHospitals()
   }, [])
 
   const hasActiveFilters = Object.values(currentFilters).some(v => v !== undefined && v !== null && v !== '' && v !== false)

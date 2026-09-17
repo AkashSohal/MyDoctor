@@ -120,7 +120,7 @@ export function NoDoctorsFound({
   if (onChangeSpecialty) {
     suggestions.push(
       <button
-        key="specialty"
+        key="specialty-browse"
         onClick={onChangeSpecialty}
         className="flex items-center gap-3 text-secondary-600 hover:text-secondary-900 transition-colors"
       >

@@ -198,20 +198,25 @@ export default function DoctorOnboardingPage() {
           doctor_id: doctor.id,
           hospital_id,
         }))
-        await supabase.from('doctor_hospitals').insert(hospitalInserts)
+        const { error: hospitalError } = await supabase.from('doctor_hospitals').insert(hospitalInserts)
+        if (hospitalError) console.error('Error adding hospital affiliations:', hospitalError)
       }
 
       // Add availability
       if (formData.availability.length > 0) {
-        const availabilityInserts = formData.availability.map(slot => ({
-          doctor_id: doctor.id,
-          hospital_id: slot.hospital_id,
-          day_of_week: slot.day_of_week,
-          start_time: slot.start_time,
-          end_time: slot.end_time,
-          is_active: true,
-        }))
-        await supabase.from('availability').insert(availabilityInserts)
+        const validSlots = formData.availability.filter(slot => slot.hospital_id)
+        if (validSlots.length > 0) {
+          const availabilityInserts = validSlots.map(slot => ({
+            doctor_id: doctor.id,
+            hospital_id: slot.hospital_id,
+            day_of_week: slot.day_of_week,
+            start_time: slot.start_time,
+            end_time: slot.end_time,
+            is_active: true,
+          }))
+          const { error: availError } = await supabase.from('availability').insert(availabilityInserts)
+          if (availError) console.error('Error adding availability:', availError)
+        }
       }
 
       // Update user role to doctor

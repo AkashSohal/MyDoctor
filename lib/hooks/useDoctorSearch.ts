@@ -1,10 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect, useRef } from 'react'
-import { createClient } from '@/utils/supabase/client'
 import { Doctor, SearchFilters, SearchResult, Location } from '@/lib/types'
-
-const supabase = createClient()
 
 interface UseDoctorSearchOptions {
   initialFilters?: SearchFilters
@@ -42,21 +39,20 @@ export function useDoctorSearch(options: UseDoctorSearchOptions = {}) {
 
   const searchDoctors = useCallback(async (pageNum: number = 1, append: boolean = false) => {
     const loc = locationRef.current
-    if (!loc?.latitude || !loc?.longitude) {
-      setError('Location is required to search for doctors')
-      return
-    }
 
     setLoading(true)
     setError(null)
 
     try {
       const searchParams = new URLSearchParams({
-        lat: loc.latitude.toString(),
-        lng: loc.longitude.toString(),
         page: pageNum.toString(),
         per_page: perPage.toString(),
       })
+
+      if (loc?.latitude && loc?.longitude) {
+        searchParams.append('lat', loc.latitude.toString())
+        searchParams.append('lng', loc.longitude.toString())
+      }
 
       const currentFilters = filtersRef.current
       Object.entries(currentFilters).forEach(([key, value]) => {
@@ -95,10 +91,10 @@ export function useDoctorSearch(options: UseDoctorSearchOptions = {}) {
   }, [])
 
   useEffect(() => {
-    if (options.autoSearch && options.location) {
+    if (options.autoSearch) {
       searchDoctors(1)
     }
-  }, [options.autoSearch, options.location, searchDoctors])
+  }, [options.autoSearch, searchDoctors])
 
   useEffect(() => {
     if (locationRef.current) {

@@ -297,7 +297,7 @@ export default function HomePage() {
                     Find Doctors Now
                   </Button>
                 </Link>
-                <Link href="/doctor/register">
+                <Link href="/doctor/onboarding">
                   <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-primary-700 px-8">
                     Are You a Doctor?
                   </Button>

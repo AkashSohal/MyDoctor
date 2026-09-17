@@ -61,7 +61,6 @@ export default async function DoctorProfilePage({ params }: Props) {
     .select(`
       *,
       specialization:specialties(id, name, description),
-      hospitals:hospitals(id, name, address, latitude, longitude, phone, website),
       availability(*)
     `)
     .eq('id', id)
@@ -72,5 +71,13 @@ export default async function DoctorProfilePage({ params }: Props) {
     notFound()
   }
 
-  return <DoctorProfileClient doctor={doctor} />
+  // Fetch hospitals via junction table
+  const { data: doctorHospitals } = await supabase
+    .from('doctor_hospitals')
+    .select('hospital:hospitals(id, name, address, latitude, longitude, phone, website)')
+    .eq('doctor_id', id)
+
+  const hospitals = doctorHospitals?.map(dh => dh.hospital).filter(Boolean) || []
+
+  return <DoctorProfileClient doctor={{ ...doctor, hospitals }} />
 }
