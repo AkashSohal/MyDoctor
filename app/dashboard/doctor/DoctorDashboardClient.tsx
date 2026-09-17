@@ -190,18 +190,27 @@ export function DoctorDashboardClient({
 
   return (
     <div className="min-h-screen bg-secondary-50">
-      <div className="bg-white border-b border-secondary-200">
-        <div className="container py-6">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" />
-              <div>
-                <h1 className="text-2xl font-bold text-secondary-900">Dr. {doctor.full_name}</h1>
-                <p className="text-secondary-500">{doctor.specialization?.name || 'Specialist'} • {doctor.experience_years} years exp</p>
-                <div className="flex items-center gap-2 mt-1">
-                  {getVerificationBadge(doctor.verification_status)}
-                  <Badge variant="outline">{doctor.consultation_fee ? `₹${doctor.consultation_fee}` : 'Fee not set'}</Badge>
-                </div>
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-teal-600">
+        <div className="absolute inset-0">
+          <div className="absolute top-10 right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute bottom-10 left-10 w-64 h-64 rounded-full bg-teal-500/20 blur-3xl" />
+          <div className="absolute inset-0 bg-grid opacity-10" />
+        </div>
+        <div className="relative z-10 container py-8 sm:py-10">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-6">
+            <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" className="ring-4 ring-white/20 shadow-xl" />
+            <div className="flex-1">
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Dr. {doctor.full_name}</h1>
+              <p className="text-primary-100 mb-3">{doctor.specialization?.name || 'Specialist'} • {doctor.experience_years} years exp</p>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
+                  {doctor.consultation_fee ? `₹${doctor.consultation_fee}` : 'Fee not set'}
+                </span>
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 backdrop-blur-sm text-white text-sm">
+                  <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                  {doctor.rating_average.toFixed(1)}
+                </span>
               </div>
             </div>
           </div>
@@ -209,12 +218,13 @@ export function DoctorDashboardClient({
       </div>
 
       <div className="container py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-6 relative z-10">
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-primary-500 to-teal-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center shadow-lg">
+                  <Calendar className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
@@ -225,11 +235,12 @@ export function DoctorDashboardClient({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
@@ -240,11 +251,12 @@ export function DoctorDashboardClient({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Clock className="h-6 w-6 text-amber-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                  <Clock className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
@@ -255,11 +267,12 @@ export function DoctorDashboardClient({
               </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Stethoscope className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                  <Stethoscope className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">{localAvailability.length}</p>
@@ -271,11 +284,16 @@ export function DoctorDashboardClient({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="appointments">Appointments</TabsTrigger>
-            <TabsTrigger value="availability">Availability</TabsTrigger>
-            <TabsTrigger value="profile">Profile</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-4 h-14 bg-white rounded-xl shadow-sm">
+            {['overview', 'appointments', 'availability', 'profile'].map((tab) => (
+              <TabsTrigger 
+                key={tab} 
+                value={tab}
+                className="capitalize rounded-lg font-medium data-[state=active]:bg-primary-100 data-[state=active]:text-primary-700"
+              >
+                {tab}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">

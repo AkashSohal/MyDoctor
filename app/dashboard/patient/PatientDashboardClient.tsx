@@ -79,24 +79,31 @@ export function PatientDashboardClient({
 
   return (
     <div className="min-h-screen bg-secondary-50">
-      {/* Header */}
-      <div className="bg-white border-b border-secondary-200">
-        <div className="container py-6">
+      {/* Welcome Banner */}
+      <div className="relative overflow-hidden bg-gradient-to-br from-primary-600 via-primary-700 to-teal-600">
+        <div className="absolute inset-0">
+          <div className="absolute top-10 right-10 w-48 h-48 rounded-full bg-white/10 blur-3xl" />
+          <div className="absolute bottom-10 left-10 w-64 h-64 rounded-full bg-teal-500/20 blur-3xl" />
+          <div className="absolute inset-0 bg-grid opacity-10" />
+        </div>
+        <div className="relative z-10 container py-8 sm:py-10">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-bold text-secondary-900">Patient Dashboard</h1>
-              <p className="text-secondary-500">Welcome back, {user.full_name || 'Patient'}</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
+                Welcome back, {user.full_name || 'Patient'} 👋
+              </h1>
+              <p className="text-primary-100">
+                {upcomingAppointments.length > 0 
+                  ? `You have ${upcomingAppointments.length} upcoming appointment${upcomingAppointments.length > 1 ? 's' : ''}`
+                  : 'Ready to find your next doctor?'
+                }
+              </p>
             </div>
             <div className="flex items-center gap-3">
               <Link href="/doctors">
-                <Button variant="outline" size="sm">
+                <Button className="bg-white text-primary-600 hover:bg-primary-50 shadow-lg hover:shadow-xl transition-all duration-300 font-semibold">
                   <Plus className="h-4 w-4 mr-2" />
                   Find Doctors
-                </Button>
-              </Link>
-              <Link href="/dashboard/patient?tab=settings">
-                <Button variant="ghost" size="sm">
-                  <Settings className="h-4 w-4" />
                 </Button>
               </Link>
             </div>
@@ -106,62 +113,66 @@ export function PatientDashboardClient({
 
       {/* Stats Cards */}
       <div className="container py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-6 relative z-10">
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-primary-500 to-teal-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary-100 flex items-center justify-center">
-                  <Calendar className="h-6 w-6 text-primary-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center shadow-lg">
+                  <Calendar className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
                     {upcomingAppointments.filter(a => a.status === 'confirmed').length}
                   </p>
-                  <p className="text-sm text-secondary-500">Upcoming Appointments</p>
+                  <p className="text-sm text-secondary-500">Upcoming</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-green-500 to-emerald-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-green-100 flex items-center justify-center">
-                  <CheckCircle className="h-6 w-6 text-green-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center shadow-lg">
+                  <CheckCircle className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">
                     {pastAppointments.filter(a => a.status === 'completed').length}
                   </p>
-                  <p className="text-sm text-secondary-500">Completed Visits</p>
+                  <p className="text-sm text-secondary-500">Completed</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-amber-500 to-orange-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center">
-                  <Heart className="h-6 w-6 text-amber-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg">
+                  <Heart className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">{savedDoctors.length}</p>
-                  <p className="text-sm text-secondary-500">Saved Doctors</p>
+                  <p className="text-sm text-secondary-500">Saved</p>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className="border-0 shadow-card overflow-hidden">
+            <div className="h-1 bg-gradient-to-r from-purple-500 to-pink-500" />
             <CardContent className="p-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center">
-                  <Star className="h-6 w-6 text-purple-600" />
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center shadow-lg">
+                  <Star className="h-6 w-6 text-white" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold text-secondary-900">{reviews.length}</p>
-                  <p className="text-sm text-secondary-500">Reviews Written</p>
+                  <p className="text-sm text-secondary-500">Reviews</p>
                 </div>
               </div>
             </CardContent>
