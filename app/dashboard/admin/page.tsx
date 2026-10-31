@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { AdminDashboardClient } from './AdminDashboardClient'
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard | MediNear',
+  title: 'Admin Dashboard | MyDoctor',
   description: 'Manage doctors, reviews, hospitals, and platform settings.',
 }
 

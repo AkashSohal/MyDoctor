@@ -45,6 +45,36 @@ export function DoctorCard({
     return a.day_of_week === today && a.is_active
   })
 
+  const nextSlot = React.useMemo(() => {
+    const slots = doctor.availability?.filter(a => a.is_active) || []
+    if (slots.length === 0) return null
+
+    const now = new Date()
+    const today = now.getDay()
+    const nowMinutes = now.getHours() * 60 + now.getMinutes()
+    const toMinutes = (time: string) => {
+      const [h, m] = time.split(':').map(Number)
+      return h * 60 + (m || 0)
+    }
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+
+    for (let offset = 0; offset < 7; offset++) {
+      const day = (today + offset) % 7
+      const candidate = slots
+        .filter(a => a.day_of_week === day)
+        .filter(a => (offset === 0 ? toMinutes(a.start_time) >= nowMinutes : true))
+        .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]
+      if (candidate) {
+        const label = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : dayNames[day]
+        const [hours, minutes] = candidate.start_time.split(':')
+        const hour = parseInt(hours, 10)
+        const ampm = hour >= 12 ? 'PM' : 'AM'
+        return `${label} ${hour % 12 || 12}:${minutes} ${ampm}`
+      }
+    }
+    return null
+  }, [doctor.availability])
+
   if (variant === 'compact') {
     return (
       <div className="flex items-center gap-3 p-3 rounded-xl border border-secondary-200 bg-white hover:shadow-soft transition-all duration-300 group">
@@ -196,6 +226,11 @@ export function DoctorCard({
                 <Stethoscope className="h-4 w-4" />
                 {doctor.specialization?.name || 'Specialist'}
               </span>
+              {doctor.qualifications && doctor.qualifications.length > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
+                  {doctor.qualifications.join(', ')}
+                </span>
+              )}
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
                 {doctor.experience_years} years exp
               </span>
@@ -206,6 +241,12 @@ export function DoctorCard({
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
                   <MapPin className="h-3.5 w-3.5" />
                   {formatDistance(distance)}
+                </span>
+              )}
+              {nextSlot && (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-teal-50 text-teal-700 text-sm font-medium">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Next: {nextSlot}
                 </span>
               )}
             </div>

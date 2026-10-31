@@ -1,5 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  experimental: {
+    // Trim icon-library payloads to only the icons actually imported.
+    optimizePackageImports: ['lucide-react'],
+  },
   images: {
     remotePatterns: [
       {

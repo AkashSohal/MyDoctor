@@ -26,11 +26,6 @@ export function Pagination({
   showPageSize = false,
   pageSizeOptions = [10, 20, 50],
 }: PaginationProps) {
-  if (totalPages <= 1) return null
-
-  const startItem = (currentPage - 1) * itemsPerPage + 1
-  const endItem = Math.min(currentPage * itemsPerPage, totalItems)
-
   const pages = React.useMemo(() => {
     const pages: (number | 'ellipsis')[] = []
     const maxVisiblePages = 5
@@ -62,6 +57,12 @@ export function Pagination({
     
     return pages
   }, [currentPage, totalPages])
+
+  // The early return stays after every hook so hook order never changes.
+  if (totalPages <= 1) return null
+
+  const startItem = (currentPage - 1) * itemsPerPage + 1
+  const endItem = Math.min(currentPage * itemsPerPage, totalItems)
 
   return (
     <nav

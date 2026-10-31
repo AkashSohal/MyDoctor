@@ -5,15 +5,15 @@ import { Button } from '@/components/ui/button'
 import { Shield, Heart, Users, Star, Lightbulb, Target, ArrowRight } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'About MediNear | Find the Right Doctor Near You',
-  description: 'Learn about MediNear\'s mission to help patients find verified, highly-rated specialists with transparent information.',
+  title: 'About MyDoctor | Find the Right Doctor Near You',
+  description: 'Learn about MyDoctor\'s mission to help patients find verified, highly-rated specialists with transparent information.',
 }
 
 const values = [
   {
     icon: Shield,
     title: 'Trust & Verification',
-    description: 'Every doctor on MediNear undergoes rigorous verification of medical registration, qualifications, and credentials before they appear on our platform.',
+    description: 'Every doctor on MyDoctor undergoes rigorous verification of medical registration, qualifications, and credentials before they appear on our platform.',
   },
   {
     icon: Heart,
@@ -64,8 +64,8 @@ export default function AboutPage() {
               <span className="text-gradient">Accessible & Transparent</span>
             </h1>
             <p className="text-lg sm:text-xl text-secondary-600 mb-8 max-w-2xl mx-auto">
-              MediNear was founded on a simple belief: finding the right doctor should be easy, transparent, and trustworthy. 
-              We're building the platform we wished existed when we needed care.
+              MyDoctor was founded on a simple belief: finding the right doctor should be easy, transparent, and trustworthy. 
+              We&apos;re building the platform we wished existed when we needed care.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link href="/doctors">
@@ -87,16 +87,16 @@ export default function AboutPage() {
               <h2 className="text-3xl font-bold text-secondary-900 mb-6">Our Mission</h2>
               <div className="space-y-4 text-lg text-secondary-600">
                 <p>
-                  MediNear exists to bridge the gap between patients and quality healthcare providers. 
-                  In India's complex healthcare landscape, patients often struggle to find verified specialists, 
+                  MyDoctor exists to bridge the gap between patients and quality healthcare providers. 
+                  In India&apos;s complex healthcare landscape, patients often struggle to find verified specialists, 
                   compare options, and make informed decisions.
                 </p>
                 <p>
-                  We're changing that by creating a platform where every doctor is verified, every review is authentic, 
+                  We&apos;re changing that by creating a platform where every doctor is verified, every review is authentic, 
                   and every piece of information helps you choose with confidence.
                 </p>
                 <p className="font-medium text-primary-700">
-                  "Nearby. Verified. Trusted." — This isn't just a tagline. It's our promise to every patient.
+                  &quot;Nearby. Verified. Trusted.&quot; &mdash; This isn&apos;t just a tagline. It&apos;s our promise to every patient.
                 </p>
               </div>
             </div>
@@ -183,7 +183,7 @@ export default function AboutPage() {
         <div className="container text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Find Your Doctor?</h2>
           <p className="text-primary-100 text-lg mb-8 max-w-2xl mx-auto">
-            Join thousands of patients who trust MediNear to find verified, highly-rated specialists near them.
+            Join thousands of patients who trust MyDoctor to find verified, highly-rated specialists near them.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
             <Link href="/doctors">

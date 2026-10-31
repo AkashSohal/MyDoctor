@@ -28,6 +28,8 @@ export function NewAppointmentContent() {
   
   const [step, setStep] = React.useState(1)
   const [loading, setLoading] = React.useState(false)
+  const [submitError, setSubmitError] = React.useState<string | null>(null)
+  const [bookedStatus, setBookedStatus] = React.useState<'pending' | 'confirmed'>('pending')
   const [doctor, setDoctor] = React.useState<Doctor | null>(null)
   const [hospitals, setHospitals] = React.useState<Hospital[]>([])
   const [availability, setAvailability] = React.useState<Availability[]>([])
@@ -42,13 +44,7 @@ export function NewAppointmentContent() {
     message: '',
   })
 
-  React.useEffect(() => {
-    if (doctorId) {
-      loadDoctor()
-    }
-  }, [doctorId])
-
-  const loadDoctor = async () => {
+  const loadDoctor = React.useCallback(async () => {
     const { data } = await supabase
       .from('doctors')
       .select(`
@@ -76,7 +72,13 @@ export function NewAppointmentContent() {
         setSelectedHospital(hospitalsList[0].id)
       }
     }
-  }
+  }, [doctorId])
+
+  React.useEffect(() => {
+    if (doctorId) {
+      loadDoctor()
+    }
+  }, [doctorId, loadDoctor])
 
   const filteredSlots = availability.filter(a => 
     a.hospital_id === selectedHospital && 
@@ -86,32 +88,106 @@ export function NewAppointmentContent() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
+    if (loading) return
+    setSubmitError(null)
 
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) {
-      router.push('/auth/login?redirect=/appointments/new')
+    if (!doctorId || !selectedHospital || !selectedDate || !selectedSlot) {
+      setSubmitError('Please choose a hospital, date, and time slot before submitting.')
       return
     }
 
-    const { error } = await supabase
-      .from('appointments')
-      .insert({
-        doctor_id: doctorId,
-        hospital_id: selectedHospital,
-        patient_id: user.id,
-        appointment_date: selectedDate,
-        appointment_time: selectedSlot,
-        patient_message: formData.message,
-        status: 'pending',
-      })
+    setLoading(true)
 
-    if (error) {
-      alert('Failed to book appointment: ' + error.message)
-    } else {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        const redirect = encodeURIComponent(`/appointments/new?doctor=${doctorId}`)
+        router.push(`/auth/login?redirect=${redirect}`)
+        return
+      }
+
+      // The chosen slot must still be an active published slot for that weekday
+      const selectedDay = new Date(`${selectedDate}T00:00:00`).getDay()
+      const slotStillAvailable = availability.some(
+        (a) =>
+          a.hospital_id === selectedHospital &&
+          a.day_of_week === selectedDay &&
+          a.is_active &&
+          a.start_time.slice(0, 5) === selectedSlot.slice(0, 5)
+      )
+
+      if (!slotStillAvailable) {
+        setSubmitError('That time slot is no longer available. Please choose another date or time.')
+        return
+      }
+
+      // Guard against the slot being taken between page load and submission
+      const { data: conflicting, error: conflictError } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('doctor_id', doctorId)
+        .eq('hospital_id', selectedHospital)
+        .eq('appointment_date', selectedDate)
+        .eq('appointment_time', selectedSlot)
+        .in('status', ['pending', 'confirmed'])
+        .limit(1)
+
+      if (conflictError) {
+        setSubmitError('We could not verify that this slot is still free. Please try again.')
+        return
+      }
+
+      if (conflicting && conflicting.length > 0) {
+        setSubmitError('This slot was just booked by someone else. Please pick another time.')
+        return
+      }
+
+      // Prevent the same patient double-booking the same slot
+      const { data: existingMine } = await supabase
+        .from('appointments')
+        .select('id')
+        .eq('doctor_id', doctorId)
+        .eq('patient_id', user.id)
+        .eq('appointment_date', selectedDate)
+        .eq('appointment_time', selectedSlot)
+        .in('status', ['pending', 'confirmed'])
+        .limit(1)
+
+      if (existingMine && existingMine.length > 0) {
+        setSubmitError('You already have an appointment with this doctor at the selected time.')
+        return
+      }
+
+      const { data: inserted, error } = await supabase
+        .from('appointments')
+        .insert({
+          doctor_id: doctorId,
+          hospital_id: selectedHospital,
+          patient_id: user.id,
+          appointment_date: selectedDate,
+          appointment_time: selectedSlot,
+          patient_message: formData.message,
+          status: 'pending',
+        })
+        .select('id, status')
+        .single()
+
+      if (error) {
+        setSubmitError(`We could not submit your appointment request: ${error.message}`)
+        return
+      }
+
+      setBookedStatus(inserted?.status === 'confirmed' ? 'confirmed' : 'pending')
       setStep(6)
+    } catch (err) {
+      setSubmitError(
+        err instanceof Error
+          ? err.message
+          : 'Something went wrong while booking. Please try again.'
+      )
+    } finally {
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   const steps = [
@@ -445,6 +521,16 @@ export function NewAppointmentContent() {
                       </div>
                     </div>
 
+                    {submitError && (
+                      <div
+                        role="alert"
+                        className="flex items-start gap-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+                      >
+                        <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                        <span>{submitError}</span>
+                      </div>
+                    )}
+
                     <div className="flex gap-3 pt-4">
                       <Button variant="outline" onClick={() => setStep(4)}>Back</Button>
                       <Button type="submit" className="flex-1" loading={loading}>
@@ -463,11 +549,25 @@ export function NewAppointmentContent() {
                   <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-4">
                     <CheckCircle className="h-8 w-8 text-green-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-secondary-900 mb-2">Appointment Booked!</h3>
-                  <p className="text-secondary-500 mb-6">
-                    Your appointment with Dr. {doctor?.full_name} has been confirmed.
-                    You'll receive a confirmation via SMS and email.
+                  <h3 className="text-2xl font-bold text-secondary-900 mb-2">
+                    {bookedStatus === 'confirmed' ? 'Appointment Confirmed' : 'Appointment Request Submitted'}
+                  </h3>
+                  <p className="text-secondary-500 mb-4">
+                    Your {bookedStatus === 'confirmed' ? 'appointment' : 'request'} with Dr. {doctor?.full_name} for{' '}
+                    {selectedDate ? formatDate(selectedDate) : 'the selected date'} at{' '}
+                    {selectedSlot ? formatTime(selectedSlot) : 'the selected time'} has been
+                    {bookedStatus === 'confirmed' ? ' confirmed.' : ' received.'}
                   </p>
+                  <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-800">
+                    <Clock className="h-4 w-4" />
+                    Status: {bookedStatus === 'confirmed' ? 'Confirmed' : 'Pending clinic confirmation'}
+                  </div>
+                  {bookedStatus !== 'confirmed' && (
+                    <p className="text-sm text-secondary-500 mb-6">
+                      The clinic will confirm your appointment. You can track updates in your
+                      patient dashboard.
+                    </p>
+                  )}
                   <div className="flex gap-3 justify-center">
                     <Link href="/dashboard/patient">
                       <Button size="lg">View Dashboard</Button>

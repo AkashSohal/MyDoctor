@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/button'
 import { Search, Shield, Calendar, MapPin, Star, CheckCircle, ArrowRight, Users, Clock, Stethoscope, Building2, Smartphone } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'How It Works | MediNear',
-  description: 'Learn how to find, compare, and book appointments with verified doctors on MediNear in three simple steps.',
+  title: 'How It Works | MyDoctor',
+  description: 'Learn how to find, compare, and book appointments with verified doctors on MyDoctor in three simple steps.',
 }
 
 const steps = [
@@ -36,7 +36,7 @@ const steps = [
       'Real-time availability (today, this week, now)',
       'Consultation fees upfront',
       'Distance from your location',
-      'MediNear Match score with breakdown',
+      'MyDoctor Match score with breakdown',
       'Side-by-side comparison of up to 3 doctors',
     ],
   },
@@ -93,8 +93,8 @@ const features = [
 
 const faqs = [
   {
-    q: 'Is MediNear free to use?',
-    a: 'Yes, MediNear is completely free for patients. We don\'t charge for searching, comparing, or booking appointments.',
+    q: 'Is MyDoctor free to use?',
+    a: 'Yes, MyDoctor is completely free for patients. We don\'t charge for searching, comparing, or booking appointments.',
   },
   {
     q: 'How are doctors verified?',
@@ -129,7 +129,7 @@ export default function HowItWorksPage() {
               Simple 3-Step Process
             </div>
             <h1 className="text-4xl sm:text-5xl font-bold text-secondary-900 tracking-tight mb-6">
-              How MediNear{' '}
+              How MyDoctor{' '}
               <span className="text-gradient">Works</span>
             </h1>
             <p className="text-lg sm:text-xl text-secondary-600 mb-8">
@@ -181,7 +181,7 @@ export default function HowItWorksPage() {
       <section className="section bg-secondary-50">
         <div className="container">
           <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold text-secondary-900 mb-4">Why Patients Choose MediNear</h2>
+            <h2 className="text-3xl font-bold text-secondary-900 mb-4">Why Patients Choose MyDoctor</h2>
             <p className="text-lg text-secondary-600">Built for how you actually search for healthcare</p>
           </div>
 
@@ -206,7 +206,7 @@ export default function HowItWorksPage() {
         <div className="container">
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-bold text-secondary-900 mb-4">Frequently Asked Questions</h2>
-            <p className="text-lg text-secondary-600">Everything you need to know about using MediNear</p>
+            <p className="text-lg text-secondary-600">Everything you need to know about using MyDoctor</p>
           </div>
 
           <div className="max-w-3xl mx-auto space-y-4">
@@ -230,7 +230,7 @@ export default function HowItWorksPage() {
         <div className="container text-center">
           <h2 className="text-3xl sm:text-4xl font-bold text-white mb-4">Ready to Get Started?</h2>
           <p className="text-primary-100 text-lg mb-8 max-w-2xl mx-auto">
-            Find your doctor today. It\'s free, fast, and trusted by thousands of patients.
+            Find your doctor today. It&apos;s free, fast, and trusted by thousands of patients.
           </p>
           <Link href="/doctors">
             <Button size="lg" className="w-full sm:w-auto bg-white text-primary-600 hover:bg-primary-50 px-8">

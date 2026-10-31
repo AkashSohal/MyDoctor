@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { describeAuthError } from '@/lib/auth-errors'
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Shield, Star, MapPin, Clock } from 'lucide-react'
 
 type LoginForm = {
@@ -32,17 +33,24 @@ export function LoginContent() {
   })
 
   const onSubmit = async (data: LoginForm) => {
+    if (loading) return
     setLoading(true)
     setError('')
-    
-    const { error } = await signIn(data.email, data.password)
-    
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
+
+    try {
+      const { error } = await signIn(data.email, data.password)
+
+      if (error) {
+        setError(describeAuthError(error, 'Unable to sign in. Please try again.'))
+        setLoading(false)
+        return
+      }
+
       router.push(redirectTo)
       router.refresh()
+    } catch (err) {
+      setError(describeAuthError(err, 'Unable to sign in. Please try again.'))
+      setLoading(false)
     }
   }
 
@@ -52,14 +60,14 @@ export function LoginContent() {
       <div className="flex-1 flex items-center justify-center p-6 sm:p-12 bg-white">
         <div className="w-full max-w-md">
           <div className="mb-8">
-            <Link href="/" className="inline-flex items-center gap-2.5 mb-8 group" aria-label="MediNear Home">
+            <Link href="/" className="inline-flex items-center gap-2.5 mb-8 group" aria-label="MyDoctor Home">
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 shadow-md group-hover:shadow-glow transition-all duration-300">
                 <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
               <span className="text-2xl font-bold bg-gradient-to-r from-primary-600 to-teal-600 bg-clip-text text-transparent">
-                MediNear
+                MyDoctor
               </span>
             </Link>
             <h1 className="text-3xl font-bold text-secondary-900 mb-2">Welcome back</h1>
@@ -233,7 +241,7 @@ export function LoginContent() {
                 ))}
               </div>
               <div>
-                <p className="text-white font-medium">100,000+ patients trust MediNear</p>
+                <p className="text-white font-medium">100,000+ patients trust MyDoctor</p>
                 <div className="flex items-center gap-1 text-primary-200 text-sm">
                   {[1, 2, 3, 4, 5].map((i) => (
                     <Star key={i} className="h-4 w-4 fill-current" />

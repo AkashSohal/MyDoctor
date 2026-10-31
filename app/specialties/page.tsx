@@ -1,32 +1,40 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import { unstable_cache } from 'next/cache'
+import { createPublicClient } from '@/utils/supabase/public'
 import { Card, CardContent } from '@/components/ui/card'
 import { Stethoscope, Heart, Users, ArrowRight } from 'lucide-react'
 import { SPECIALTIES } from '@/lib/constants'
 
 export const metadata: Metadata = {
-  title: 'Medical Specialties | MediNear',
+  title: 'Medical Specialties | MyDoctor',
   description: 'Browse all medical specialties and find verified specialists near you.',
 }
 
-export const dynamic = 'force-dynamic'
+// Specialty catalog changes rarely — cache aggressively.
+export const revalidate = 300
+
+const getSpecialtiesWithCounts = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data } = await supabase
+      .from('specialties')
+      .select(`
+        id,
+        name,
+        description,
+        icon,
+        doctors:doctors(count)
+      `)
+      .order('name')
+    return data ?? []
+  },
+  ['specialties-with-counts'],
+  { revalidate: 300, tags: ['specialties'] }
+)
 
 export default async function SpecialtiesPage() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: specialtiesWithCounts } = await supabase
-    .from('specialties')
-    .select(`
-      id,
-      name,
-      description,
-      icon,
-      doctors:doctors(count)
-    `)
-    .order('name')
+  const specialtiesWithCounts = await getSpecialtiesWithCounts()
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -86,8 +94,8 @@ export default async function SpecialtiesPage() {
         <div className="mt-12 text-center">
           <Card className="bg-primary-50 border-primary-200 max-w-2xl mx-auto">
             <CardContent className="p-8">
-              <h2 className="text-2xl font-bold text-primary-900 mb-2">Can't find your specialty?</h2>
-              <p className="text-primary-700 mb-4">We're constantly adding new specialties. Contact us if you need a specific type of specialist.</p>
+              <h2 className="text-2xl font-bold text-primary-900 mb-2">Can&apos;t find your specialty?</h2>
+              <p className="text-primary-700 mb-4">We&apos;re constantly adding new specialties. Contact us if you need a specific type of specialist.</p>
               <Link href="/contact">
                 <button className="px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors">
                   Contact Us

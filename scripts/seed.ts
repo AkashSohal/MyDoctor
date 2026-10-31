@@ -14,7 +14,7 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
 })
 
 async function seed() {
-  console.log('🌱 Starting MediNear seed...')
+  console.log('🌱 Starting MyDoctor seed...')
 
   // Create demo users
   const demoUsers = [

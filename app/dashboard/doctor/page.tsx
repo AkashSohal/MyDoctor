@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { DoctorDashboardClient } from './DoctorDashboardClient'
 
 export const metadata: Metadata = {
-  title: 'Doctor Dashboard | MediNear',
+  title: 'Doctor Dashboard | MyDoctor',
   description: 'Manage your profile, availability, and appointments.',
 }
 

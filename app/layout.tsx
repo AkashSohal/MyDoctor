@@ -8,24 +8,24 @@ import { Footer } from '@/components/layout/Footer'
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' })
 
 export const metadata: Metadata = {
-  title: 'MediNear - Find the Right Doctor Near You',
+  title: 'MyDoctor - Find the Right Doctor Near You',
   description: 'Discover verified MBBS doctors, specialists, ratings, hospitals and availability — all in one place.',
   keywords: ['doctor', 'healthcare', 'medical', 'appointment', 'specialist', 'hospital', 'clinic'],
-  authors: [{ name: 'MediNear' }],
-  creator: 'MediNear',
-  publisher: 'MediNear',
+  authors: [{ name: 'MyDoctor' }],
+  creator: 'MyDoctor',
+  publisher: 'MyDoctor',
   robots: 'index, follow',
   openGraph: {
     type: 'website',
     locale: 'en_IN',
-    url: 'https://medinear.com',
-    title: 'MediNear - Find the Right Doctor Near You',
+    url: 'https://mydoctor.com',
+    title: 'MyDoctor - Find the Right Doctor Near You',
     description: 'Discover verified MBBS doctors, specialists, ratings, hospitals and availability — all in one place.',
-    siteName: 'MediNear',
+    siteName: 'MyDoctor',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'MediNear - Find the Right Doctor Near You',
+    title: 'MyDoctor - Find the Right Doctor Near You',
     description: 'Discover verified MBBS doctors, specialists, ratings, hospitals and availability.',
   },
   verification: {

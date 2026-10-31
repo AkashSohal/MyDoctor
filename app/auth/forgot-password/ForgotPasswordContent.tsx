@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { describeAuthError } from '@/lib/auth-errors'
 import { Mail, ArrowLeft, CheckCircle, AlertCircle } from 'lucide-react'
 
 type ForgotPasswordForm = {
@@ -31,13 +32,18 @@ export function ForgotPasswordContent() {
     setLoading(true)
     setError('')
 
-    const { error } = await resetPassword(data.email)
+    try {
+      const { error } = await resetPassword(data.email)
 
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      setSent(true)
+      if (error) {
+        setError(describeAuthError(error, 'We could not send the password reset email. Please try again.'))
+      } else {
+        setSent(true)
+      }
+    } catch (err) {
+      setError(describeAuthError(err, 'We could not send the password reset email. Please try again.'))
+    } finally {
+      // Never stay stuck on the loading button if the request failed.
       setLoading(false)
     }
   }
@@ -53,7 +59,7 @@ export function ForgotPasswordContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <span className="text-2xl font-bold text-secondary-900">MediNear</span>
+              <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
             </Link>
           </div>
 
@@ -65,10 +71,10 @@ export function ForgotPasswordContent() {
                 </div>
                 <h2 className="text-lg font-semibold text-secondary-900">Check your email</h2>
                 <p className="text-sm text-secondary-500">
-                  We've sent a password reset link to your email address. Please check your inbox and follow the instructions.
+                  We&apos;ve sent a password reset link to your email address. Please check your inbox and follow the instructions.
                 </p>
                 <p className="text-xs text-secondary-400">
-                  Didn't receive the email? Check your spam folder or try again.
+                  Didn&apos;t receive the email? Check your spam folder or try again.
                 </p>
                 <div className="pt-4">
                   <Link href={`/auth/login?role=${role}`}>
@@ -96,16 +102,16 @@ export function ForgotPasswordContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-secondary-900">MediNear</span>
+            <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-900">Forgot password?</h1>
-          <p className="text-secondary-500 mt-2">No worries, we'll send you reset instructions</p>
+          <p className="text-secondary-500 mt-2">No worries, we&apos;ll send you reset instructions</p>
         </div>
 
         <Card>
           <CardHeader className="text-center">
             <CardTitle>Reset Password</CardTitle>
-            <CardDescription>Enter your email and we'll send you a link to reset your password</CardDescription>
+            <CardDescription>Enter your email and we&apos;ll send you a link to reset your password</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (

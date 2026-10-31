@@ -71,28 +71,28 @@ export default function DoctorOnboardingPage() {
     }>,
   })
 
-  React.useEffect(() => {
-    checkUser()
-    loadData()
-  }, [])
-
-  const checkUser = async () => {
+  const checkUser = React.useCallback(async () => {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) {
       router.push('/auth/login?role=doctor')
       return
     }
     setUserId(user.id)
-  }
+  }, [router])
 
-  const loadData = async () => {
+  const loadData = React.useCallback(async () => {
     const [specialtiesRes, hospitalsRes] = await Promise.all([
       supabase.from('specialties').select('id, name').order('name'),
       supabase.from('hospitals').select('id, name, address, latitude, longitude').order('name'),
     ])
     if (specialtiesRes.data) setSpecialties(specialtiesRes.data)
     if (hospitalsRes.data) setHospitals(hospitalsRes.data)
-  }
+  }, [])
+
+  React.useEffect(() => {
+    checkUser()
+    loadData()
+  }, [checkUser, loadData])
 
   const addQualification = () => {
     if (formData.qualificationInput.trim() && !formData.qualifications.includes(formData.qualificationInput.trim())) {
@@ -266,7 +266,7 @@ export default function DoctorOnboardingPage() {
               <div className="w-10 h-10 rounded-xl bg-primary-600 flex items-center justify-center">
                 <Stethoscope className="h-5 w-5 text-white" />
               </div>
-              <span className="text-xl font-bold text-secondary-900">MediNear</span>
+              <span className="text-xl font-bold text-secondary-900">MyDoctor</span>
             </Link>
             <div className="flex items-center gap-1">
               {steps.map((s, i) => (

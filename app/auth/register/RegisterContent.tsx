@@ -11,6 +11,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { describeAuthError } from '@/lib/auth-errors'
 import { Mail, Lock, User, Phone, Eye, EyeOff, AlertCircle, Stethoscope, Building2 } from 'lucide-react'
 
 type RegisterForm = {
@@ -28,6 +29,7 @@ export function RegisterContent() {
   const searchParams = useSearchParams()
   const { signUp } = useAuth()
   const [error, setError] = React.useState('')
+  const [warning, setWarning] = React.useState('')
   const [loading, setLoading] = React.useState(false)
   const [showPassword, setShowPassword] = React.useState(false)
 
@@ -40,27 +42,58 @@ export function RegisterContent() {
   const password = watch('password')
 
   const onSubmit = async (data: RegisterForm) => {
+    if (loading) return
     setLoading(true)
     setError('')
-    
+    setWarning('')
+
     if (data.password !== data.confirmPassword) {
       setError('Passwords do not match')
       setLoading(false)
       return
     }
-    
-    const { error } = await signUp(data.email, data.password, data.fullName, data.role)
-    
-    if (error) {
-      setError(error.message)
-      setLoading(false)
-    } else {
-      if (data.role === 'doctor') {
-        router.push('/doctor/onboarding')
-      } else {
-        router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`)
+
+    let redirectPending = false
+
+    try {
+      const { error, session, profileError } = await signUp(
+        data.email,
+        data.password,
+        data.fullName,
+        data.role,
+        data.phone
+      )
+
+      if (error) {
+        setError(describeAuthError(error, 'Unable to create your account. Please try again.'))
+        return
       }
+
+      if (session) {
+        const nextPath = data.role === 'doctor' ? '/doctor/onboarding' : '/'
+        if (profileError) {
+          setWarning('Your account was created, but your profile details could not be saved.')
+          redirectPending = true
+          setTimeout(() => {
+            router.push(nextPath)
+            router.refresh()
+          }, 2500)
+          return
+        }
+        redirectPending = true
+        router.push(nextPath)
+        router.refresh()
+        return
+      }
+
+      redirectPending = true
+      router.push(`/auth/verify-email?email=${encodeURIComponent(data.email)}`)
       router.refresh()
+    } catch (err) {
+      setError(describeAuthError(err, 'Unable to create your account. Please try again.'))
+    } finally {
+      // Never stay stuck on "Loading..." if the request failed.
+      if (!redirectPending) setLoading(false)
     }
   }
 
@@ -74,10 +107,10 @@ export function RegisterContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-secondary-900">MediNear</span>
+            <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-900">Create your account</h1>
-          <p className="text-secondary-500 mt-2">Join MediNear as a {role === 'doctor' ? 'doctor' : 'patient'}</p>
+          <p className="text-secondary-500 mt-2">Join MyDoctor as a {role === 'doctor' ? 'doctor' : 'patient'}</p>
         </div>
 
         <Card>
@@ -87,9 +120,16 @@ export function RegisterContent() {
           </CardHeader>
           <CardContent className="space-y-4">
             {error && (
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+              <div role="alert" className="flex items-center gap-2 p-3 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
                 {error}
+              </div>
+            )}
+
+            {warning && (
+              <div role="status" className="flex items-center gap-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-sm">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                {warning}
               </div>
             )}
 
@@ -138,9 +178,12 @@ export function RegisterContent() {
                   error={errors.phone?.message}
                   {...register('phone', {
                     required: 'Phone number is required',
-                    pattern: {
-                      value: /^[\+]?[(]?[0-9]{3}[)]?[-\s\.]?[0-9]{3}[-\s\.]?[0-9]{4,6}$/,
-                      message: 'Invalid phone number',
+                    validate: (value) => {
+                      const digits = value.replace(/\D/g, '')
+                      if (!/^\+?[\d\s().-]+$/.test(value) || digits.length < 7 || digits.length > 15) {
+                        return 'Enter a valid phone number (7-15 digits)'
+                      }
+                      return true
                     },
                   })}
                   leftIcon={<Phone className="h-5 w-5" />}

@@ -1,29 +1,37 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import { unstable_cache } from 'next/cache'
+import { createPublicClient } from '@/utils/supabase/public'
 import { Card, CardContent } from '@/components/ui/card'
 import { Building2, MapPin, Phone, ExternalLink, ArrowRight, Users, Star } from 'lucide-react'
 import { formatDistance } from '@/lib/utils'
 
 export const metadata: Metadata = {
-  title: 'Hospitals & Clinics | MediNear',
+  title: 'Hospitals & Clinics | MyDoctor',
   description: 'Find top hospitals and clinics with verified doctors. View locations, contact info, and doctor availability.',
 }
 
-export const dynamic = 'force-dynamic'
+// Public listing data — cached and revalidated in the background.
+export const revalidate = 300
+
+const getHospitals = unstable_cache(
+  async () => {
+    const supabase = createPublicClient()
+    const { data } = await supabase
+      .from('hospitals')
+      .select(`
+        id, name, address, phone, website, latitude, longitude,
+        doctors:doctor_hospitals(count)
+      `)
+      .order('name')
+    return data ?? []
+  },
+  ['hospitals-list'],
+  { revalidate: 300, tags: ['hospitals'] }
+)
 
 export default async function HospitalsPage() {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
-
-  const { data: hospitals } = await supabase
-    .from('hospitals')
-    .select(`
-      *,
-      doctors:doctor_hospitals(count)
-    `)
-    .order('name')
+  const hospitals = await getHospitals()
 
   return (
     <div className="min-h-screen bg-secondary-50">
@@ -86,7 +94,7 @@ export default async function HospitalsPage() {
               <CardContent className="p-8">
                 <Building2 className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
                 <h2 className="text-xl font-semibold text-secondary-900 mb-2">No hospitals found</h2>
-                <p className="text-secondary-500 mb-4">We're adding more hospitals to our network. Check back soon!</p>
+                <p className="text-secondary-500 mb-4">We&apos;re adding more hospitals to our network. Check back soon!</p>
               </CardContent>
             </Card>
           </div>

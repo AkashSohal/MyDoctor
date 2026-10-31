@@ -156,7 +156,7 @@ export function NoDoctorsFound({
       </div>
       <h3 className="mt-6 text-xl font-semibold text-secondary-900">No doctors found</h3>
       <p className="mt-2 text-secondary-500 max-w-md">
-        We couldn't find any doctors matching your search criteria.
+        We couldn&apos;t find any doctors matching your search criteria.
       </p>
       <div className="mt-8 w-full max-w-md space-y-3">
         {suggestions.map((suggestion) => (
@@ -187,7 +187,7 @@ export function NoResultsFound({
       <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-secondary-100 text-secondary-400">
         <Frown className="h-10 w-10" />
       </div>
-      <h3 className="mt-6 text-xl font-semibold text-secondary-900">No results for "{query}"</h3>
+      <h3 className="mt-6 text-xl font-semibold text-secondary-900">No results for &quot;{query}&quot;</h3>
       <p className="mt-2 text-secondary-500 max-w-md">
         Try adjusting your search terms or browse our specialties below.
       </p>

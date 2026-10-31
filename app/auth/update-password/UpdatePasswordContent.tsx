@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Label } from '@/components/ui/label'
 import { createClient } from '@/utils/supabase/client'
 import { useAuth } from '@/lib/hooks/useAuth'
+import { describeAuthError } from '@/lib/auth-errors'
 import { Lock, Eye, EyeOff, AlertCircle, CheckCircle } from 'lucide-react'
 
 type UpdatePasswordForm = {
@@ -34,20 +35,25 @@ export function UpdatePasswordContent() {
     setLoading(true)
     setError('')
 
-    const { error } = await supabase.auth.updateUser({
-      password: data.password,
-    })
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: data.password,
+      })
 
-    if (error) {
-      setError(error.message)
+      if (error) {
+        setError(describeAuthError(error, 'We could not update your password. Please try again.'))
+      } else {
+        setSuccess(true)
+        const redirectPath = user?.role === 'admin' ? '/dashboard/admin' : user?.role === 'doctor' ? '/dashboard/doctor' : '/dashboard/patient'
+        setTimeout(() => {
+          router.push(redirectPath)
+        }, 2000)
+      }
+    } catch (err) {
+      setError(describeAuthError(err, 'We could not update your password. Please try again.'))
+    } finally {
+      // Never stay stuck on the loading button if the request failed.
       setLoading(false)
-    } else {
-      setSuccess(true)
-      setLoading(false)
-      const redirectPath = user?.role === 'admin' ? '/dashboard/admin' : user?.role === 'doctor' ? '/dashboard/doctor' : '/dashboard/patient'
-      setTimeout(() => {
-        router.push(redirectPath)
-      }, 2000)
     }
   }
 
@@ -62,7 +68,7 @@ export function UpdatePasswordContent() {
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
               </div>
-              <span className="text-2xl font-bold text-secondary-900">MediNear</span>
+              <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
             </Link>
           </div>
 
@@ -94,7 +100,7 @@ export function UpdatePasswordContent() {
                 <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
               </svg>
             </div>
-            <span className="text-2xl font-bold text-secondary-900">MediNear</span>
+            <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-900">Update password</h1>
           <p className="text-secondary-500 mt-2">Enter your new password below</p>

@@ -1,6 +1,7 @@
 'use client'
 
 import * as React from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { formatCurrency, formatDistance, cn } from '@/lib/utils'
 import { RatingStars } from '@/components/common/RatingStars'
@@ -11,8 +12,19 @@ import { Avatar } from '@/components/ui/avatar'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { MapPin, Clock, Calendar, Stethoscope, Heart, Building2, Shield, CheckCircle, Star, Phone, Mail, ExternalLink, ArrowRight, Award, Languages, GraduationCap, Briefcase, Info, AlertCircle, Share2, Bookmark } from 'lucide-react'
 import { Doctor } from '@/lib/types'
-import { MapView } from '@/components/map/MapView'
 import { ScrollReveal } from '@/components/common/ScrollReveal'
+
+// Leaflet is heavy (~150 kB) — load it only when the map section is rendered,
+// keeping it out of the profile page's initial JavaScript bundle.
+const MapView = dynamic(
+  () => import('@/components/map/MapView').then((mod) => mod.MapView),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-full w-full animate-pulse bg-secondary-100" aria-hidden="true" />
+    ),
+  }
+)
 
 interface DoctorProfileClientProps {
   doctor: Doctor
@@ -536,9 +548,9 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
       <div className="bg-secondary-100 border-t border-secondary-200 py-6">
         <div className="container">
           <p className="text-sm text-secondary-600 text-center max-w-4xl mx-auto">
-            <strong className="text-secondary-900">Disclaimer:</strong> Information on MediNear is for discovery purposes only. 
+            <strong className="text-secondary-900">Disclaimer:</strong> Information on MyDoctor is for discovery purposes only. 
             Please verify doctor credentials, availability, consultation fees, and hospital details directly with the provider before visiting. 
-            MediNear does not guarantee appointment availability or medical outcomes.
+            MyDoctor does not guarantee appointment availability or medical outcomes.
           </p>
         </div>
       </div>

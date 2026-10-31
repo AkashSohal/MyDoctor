@@ -8,11 +8,16 @@ import { Doctor } from '@/lib/types'
 import { MapPin, Stethoscope, Star, Building2 } from 'lucide-react'
 import L from 'leaflet'
 
+// Serve marker assets from the local bundle instead of a third-party CDN.
+const markerIconUrl = new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href
+const markerIcon2xUrl = new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href
+const markerShadowUrl = new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href
+
 // Fix Leaflet marker icons
 const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconUrl: markerIconUrl,
+  iconRetinaUrl: markerIcon2xUrl,
+  shadowUrl: markerShadowUrl,
   iconSize: [25, 41],
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],

@@ -30,7 +30,9 @@ export function DoctorsPageContent() {
   const [sortBy, setSortBy] = React.useState<SearchFilters['sort_by']>(searchParams.get('sort_by') as SearchFilters['sort_by'] || 'best_match')
   const [currentFilters, setCurrentFilters] = React.useState<SearchFilters>({
     specialty: searchParams.get('specialty') || undefined,
-    distance_km: searchParams.get('distance') ? parseInt(searchParams.get('distance')!) : undefined,
+    distance_km: (searchParams.get('distance_km') || searchParams.get('distance'))
+      ? parseInt(searchParams.get('distance_km') || searchParams.get('distance')!)
+      : undefined,
     min_rating: searchParams.get('min_rating') ? parseFloat(searchParams.get('min_rating')!) : undefined,
     min_experience: searchParams.get('min_experience') ? parseInt(searchParams.get('min_experience')!) : undefined,
     available_today: searchParams.get('available_today') === 'true',
@@ -44,8 +46,9 @@ export function DoctorsPageContent() {
 
   const location = latitude && longitude ? { latitude, longitude } : null
 
-  const { doctors, totalCount, loading, error, hasMore, page, loadMore, updateFilters, clearFilters, setSearch } = useDoctorSearch({
+  const { doctors, totalCount, loading, error, hasMore, page, loadMore, updateFilters, clearFilters, setSearch, searchDoctors } = useDoctorSearch({
     initialFilters: currentFilters,
+    initialQuery: searchParams.get('q') || '',
     location,
     autoSearch: true,
   })
@@ -64,54 +67,65 @@ export function DoctorsPageContent() {
 
   const hasActiveFilters = Object.values(currentFilters).some(v => v !== undefined && v !== null && v !== '' && v !== false)
 
+  // Sync filter state to the URL without triggering an RSC/navigation
+  // roundtrip — keeps filter interaction instant while preserving deep links.
+  const syncUrlParams = React.useCallback((mutate: (params: URLSearchParams) => void) => {
+    const params = new URLSearchParams(window.location.search)
+    mutate(params)
+    params.set('page', '1')
+    const query = params.toString()
+    window.history.replaceState(null, '', query ? `/doctors?${query}` : '/doctors')
+  }, [])
+
   const handleSearch = (query: string) => {
     setSearchQuery(query)
     setSearch(query)
-    const params = new URLSearchParams(searchParams)
-    params.set('q', query)
-    params.set('page', '1')
-    router.push(`/doctors?${params.toString()}`)
+    syncUrlParams(params => params.set('q', query))
   }
 
   const handleFilterChange = (newFilters: SearchFilters) => {
     setCurrentFilters(newFilters)
     updateFilters(newFilters)
-    const params = new URLSearchParams(searchParams)
-    Object.entries(newFilters).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '' && value !== false) {
-        params.set(key, value.toString())
-      } else {
-        params.delete(key)
-      }
+    syncUrlParams(params => {
+      Object.entries(newFilters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '' && value !== false) {
+          params.set(key, value.toString())
+        } else {
+          params.delete(key)
+        }
+      })
     })
-    params.set('page', '1')
-    router.push(`/doctors?${params.toString()}`)
   }
 
   const handleClearFilters = () => {
     clearFilters()
-    const params = new URLSearchParams(searchParams)
-    params.delete('specialty')
-    params.delete('distance')
-    params.delete('min_rating')
-    params.delete('min_experience')
-    params.delete('available_today')
-    params.delete('available_now')
-    params.delete('hospital_id')
-    params.delete('gender')
-    params.delete('language')
-    params.delete('max_fee')
-    params.set('page', '1')
-    router.push(`/doctors?${params.toString()}`)
+    syncUrlParams(params => {
+      params.delete('specialty')
+      params.delete('distance')
+      params.delete('distance_km')
+      params.delete('min_rating')
+      params.delete('min_experience')
+      params.delete('available_today')
+      params.delete('available_now')
+      params.delete('hospital_id')
+      params.delete('gender')
+      params.delete('language')
+      params.delete('max_fee')
+    })
   }
 
   const handleSortChange = (value: SearchFilters['sort_by']) => {
     setSortBy(value)
     updateFilters({ sort_by: value })
-    const params = new URLSearchParams(searchParams)
-    params.set('sort_by', value || 'best_match')
-    params.set('page', '1')
-    router.push(`/doctors?${params.toString()}`)
+    syncUrlParams(params => params.set('sort_by', value || 'best_match'))
+  }
+
+  const handleRetry = () => {
+    searchDoctors(1, false, true)
+  }
+
+  const handlePrefetchDoctor = (doctorId: string) => {
+    router.prefetch(`/doctors/${doctorId}`)
   }
 
   const handleLocationClick = () => {
@@ -218,7 +232,7 @@ export function DoctorsPageContent() {
               <ErrorState
                 title="Failed to load map"
                 message={error}
-                onRetry={() => window.location.reload()}
+                onRetry={handleRetry}
               />
             ) : (
               <div className="h-full">
@@ -237,7 +251,7 @@ export function DoctorsPageContent() {
               <ErrorState
                 title="Failed to load doctors"
                 message={error}
-                onRetry={() => window.location.reload()}
+                onRetry={handleRetry}
               />
             )}
             
@@ -255,19 +269,24 @@ export function DoctorsPageContent() {
               <>
                 <div className="space-y-4" role="list" aria-label="Doctors">
                   {doctors.map((doctor) => (
-                    <DoctorCard
+                    <div
                       key={doctor.id}
-                      doctor={doctor}
-                      userLocation={location}
-                      onViewProfile={() => router.push(`/doctors/${doctor.id}`)}
-                      onViewAvailability={() => router.push(`/doctors/${doctor.id}?tab=availability`)}
-                      onGetDirections={() => window.open(`https://maps.google.com/?daddr=${doctor.latitude},${doctor.longitude}`, '_blank')}
-                      onCall={() => window.open(`tel:+91${doctor.hospitals?.[0]?.phone || ''}`, '_self')}
-                      onBookAppointment={() => router.push(`/appointments/new?doctor=${doctor.id}`)}
-                      showCompare
-                      compared={selectedDoctor === doctor.id}
-                      onCompare={() => setSelectedDoctor(selectedDoctor === doctor.id ? null : doctor.id)}
-                    />
+                      onPointerEnter={() => handlePrefetchDoctor(doctor.id)}
+                      onFocus={() => handlePrefetchDoctor(doctor.id)}
+                    >
+                      <DoctorCard
+                        doctor={doctor}
+                        userLocation={location}
+                        onViewProfile={() => router.push(`/doctors/${doctor.id}`)}
+                        onViewAvailability={() => router.push(`/doctors/${doctor.id}?tab=availability`)}
+                        onGetDirections={() => window.open(`https://maps.google.com/?daddr=${doctor.latitude},${doctor.longitude}`, '_blank')}
+                        onCall={() => window.open(`tel:+91${doctor.hospitals?.[0]?.phone || ''}`, '_self')}
+                        onBookAppointment={() => router.push(`/appointments/new?doctor=${doctor.id}`)}
+                        showCompare
+                        compared={selectedDoctor === doctor.id}
+                        onCompare={() => setSelectedDoctor(selectedDoctor === doctor.id ? null : doctor.id)}
+                      />
+                    </div>
                   ))}
                 </div>
 

@@ -1,4 +1,4 @@
-# MediNear - Nearby Specialist Doctor Discovery Platform
+# MyDoctor - Nearby Specialist Doctor Discovery Platform
 
 A production-ready healthcare discovery web application that helps patients find verified MBBS doctors, specialists, ratings, hospitals, and availability — all in one place.
 
@@ -57,7 +57,7 @@ A production-ready healthcare discovery web application that helps patients find
 ## 📁 Project Structure
 
 ```
-medinear/
+MyDoctor/
 ├── app/                    # Next.js App Router pages
 │   ├── api/               # API routes
 │   ├── auth/              # Authentication pages
@@ -97,8 +97,8 @@ medinear/
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/medinear.git
-cd medinear
+git clone https://github.com/yourusername/mydoctor.git
+cd MyDoctor
 
 # Install dependencies
 npm install
@@ -119,10 +119,12 @@ npm run dev
 Create `.env.local` with:
 
 ```env
-# Supabase
+# Supabase (frontend - publishable key only, never a secret/service-role key)
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
+
+# Server-side scripts only (scripts/seed.ts) - never expose this in frontend code
+# SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # Maps (optional - uses OpenStreetMap by default)
 # NEXT_PUBLIC_MAPS_PROVIDER=leaflet
@@ -131,7 +133,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 
 # App
 NEXT_PUBLIC_APP_URL=http://localhost:3000
-NEXT_PUBLIC_APP_NAME=MediNear
+NEXT_PUBLIC_APP_NAME=MyDoctor
 ```
 
 ## 🗄 Database Setup
@@ -206,7 +208,7 @@ supabase db push
 ## 🏥 Medical Safety & Compliance
 
 ### Disclaimer
-MediNear is a **discovery and appointment-support platform**, NOT a diagnosis or treatment platform.
+MyDoctor is a **discovery and appointment-support platform**, NOT a diagnosis or treatment platform.
 
 We **never**:
 - Diagnose patients
@@ -248,7 +250,7 @@ MIT License - see LICENSE file for details.
 
 ## 📞 Support
 
-- **Email**: support@medinear.com
+- **Email**: support@mydoctor.com
 - **Issues**: GitHub Issues
 - **Documentation**: /docs (coming soon)
 
