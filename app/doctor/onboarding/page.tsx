@@ -163,8 +163,49 @@ export default function DoctorOnboardingPage() {
     }))
   }
 
+  const validateStep = (stepNum: number): string | null => {
+    switch (stepNum) {
+      case 1:
+        if (!formData.medical_registration_number.trim()) return 'Medical registration number is required'
+        if (!formData.registration_council) return 'Registration council is required'
+        if (formData.qualifications.length === 0) return 'Add at least one qualification'
+        return null
+      case 2:
+        if (formData.experience_years <= 0) return 'Experience years is required'
+        if (formData.languages.length === 0) return 'Add at least one language'
+        return null
+      case 3:
+        return null
+      case 4:
+        return null
+      default:
+        return null
+    }
+  }
+
+  const handleNext = () => {
+    const validationError = validateStep(step)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    setError('')
+    setStep(step + 1)
+  }
+
   const handleSubmit = async () => {
     if (!userId) return
+
+    const validationError = validateStep(1) || validateStep(2)
+    if (validationError) {
+      setError(validationError)
+      return
+    }
+    if (formData.selectedHospitals.length === 0) {
+      setError('Select at least one hospital')
+      return
+    }
+
     setLoading(true)
     setError('')
 
@@ -221,7 +262,7 @@ export default function DoctorOnboardingPage() {
 
       // Update user role to doctor
       await supabase
-        .from('users')
+        .from('profiles')
         .update({ role: 'doctor' })
         .eq('id', userId)
 
@@ -649,7 +690,7 @@ export default function DoctorOnboardingPage() {
               </Button>
             )}
             {step < 4 ? (
-              <Button onClick={() => setStep(step + 1)} className="flex-1">
+              <Button onClick={handleNext} className="flex-1">
                 Continue
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>

@@ -1,26 +1,37 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/utils/supabase/server'
-import { cookies } from 'next/headers'
+import * as React from 'react'
+import { requireAdmin } from '@/lib/admin/auth'
+import { AdminShell } from '@/components/admin/AdminShell'
+
+export const dynamic = 'force-dynamic'
+
+export const metadata = {
+  title: 'Admin | MyDoctor',
+  description: 'MyDoctor administration dashboard.',
+}
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const cookieStore = await cookies()
-  const supabase = createClient(cookieStore)
+  const { supabase, userId, profile } = await requireAdmin()
 
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const [{ count: pendingVerifications }, { data: extra }] = await Promise.all([
+    supabase
+      .from('doctors')
+      .select('id', { count: 'exact', head: true })
+      .eq('verification_status', 'pending'),
+    supabase.from('profiles').select('avatar_url').eq('id', userId).single(),
+  ])
 
-  if (error || !user) {
-    redirect('/auth/login?redirect=/admin/specialties')
-  }
-
-  const { data: profile } = await supabase
-    .from('users')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') {
-    redirect('/')
-  }
-
-  return <>{children}</>
+  return (
+    <AdminShell
+      profile={{
+        id: profile.id,
+        full_name: profile.full_name,
+        email: profile.email,
+        role: profile.role,
+        avatar_url: extra?.avatar_url ?? null,
+      }}
+      pendingVerifications={pendingVerifications ?? 0}
+    >
+      {children}
+    </AdminShell>
+  )
 }

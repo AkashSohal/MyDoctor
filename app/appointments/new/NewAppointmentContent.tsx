@@ -173,7 +173,12 @@ export function NewAppointmentContent() {
         .single()
 
       if (error) {
-        setSubmitError(`We could not submit your appointment request: ${error.message}`)
+        // 23505 = unique_violation on the DB's live-slot index (someone booked it)
+        setSubmitError(
+          error.code === '23505'
+            ? 'That time slot was just taken by someone else. Please pick a different time.'
+            : `We could not submit your appointment request: ${error.message}`
+        )
         return
       }
 

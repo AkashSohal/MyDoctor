@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useAuth } from '@/lib/hooks/useAuth'
 import { describeAuthError } from '@/lib/auth-errors'
+import { createClient } from '@/utils/supabase/client'
 import { Mail, Lock, Eye, EyeOff, AlertCircle, Shield, Star, MapPin, Clock } from 'lucide-react'
 
 type LoginForm = {
@@ -38,7 +39,7 @@ export function LoginContent() {
     setError('')
 
     try {
-      const { error } = await signIn(data.email, data.password)
+      const { error, session } = await signIn(data.email, data.password)
 
       if (error) {
         setError(describeAuthError(error, 'Unable to sign in. Please try again.'))
@@ -46,7 +47,26 @@ export function LoginContent() {
         return
       }
 
-      router.push(redirectTo)
+      // Role-based landing: an explicit ?redirect= param (set by middleware)
+      // wins; otherwise send each role to its own dashboard.
+      let nextPath = redirectTo
+      if (!searchParams.get('redirect') && session?.user) {
+        const supabase = createClient()
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .maybeSingle()
+
+        nextPath =
+          profile?.role === 'admin'
+            ? '/admin'
+            : profile?.role === 'doctor'
+              ? '/dashboard/doctor'
+              : '/dashboard/patient'
+      }
+
+      router.push(nextPath)
       router.refresh()
     } catch (err) {
       setError(describeAuthError(err, 'Unable to sign in. Please try again.'))

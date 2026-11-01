@@ -44,7 +44,7 @@ export function UpdatePasswordContent() {
         setError(describeAuthError(error, 'We could not update your password. Please try again.'))
       } else {
         setSuccess(true)
-        const redirectPath = user?.role === 'admin' ? '/dashboard/admin' : user?.role === 'doctor' ? '/dashboard/doctor' : '/dashboard/patient'
+        const redirectPath = user?.role === 'admin' ? '/admin' : user?.role === 'doctor' ? '/dashboard/doctor' : '/dashboard/patient'
         setTimeout(() => {
           router.push(redirectPath)
         }, 2000)

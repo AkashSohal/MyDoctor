@@ -22,7 +22,7 @@ export default async function DoctorDashboardPage() {
   }
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
@@ -50,7 +50,7 @@ export default async function DoctorDashboardPage() {
       .from('appointments')
       .select(`
         *,
-        patient:users(full_name, phone, email, avatar_url),
+        patient:profiles(full_name, phone, email, avatar_url),
         hospital:hospitals(name, address)
       `)
       .eq('doctor_id', doctor.id)

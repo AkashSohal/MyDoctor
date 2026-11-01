@@ -33,11 +33,13 @@ async function seed() {
       user_metadata: { full_name: user.full_name, role: user.role },
     })
 
-    if (authError && !authError.message.includes('already registered')) {
+    if (authError && authError.code !== 'email_exists') {
       console.error(`Error creating user ${user.email}:`, authError)
     } else if (authData.user) {
       console.log(`✅ Created user: ${user.email} (${user.role})`)
       createdUserIds[user.email] = authData.user.id
+    } else {
+      console.log(`ℹ️ User already exists: ${user.email} (credentials will be synced below)`)
     }
   }
 
@@ -130,18 +132,26 @@ async function seed() {
   ]
 
   for (const doc of moreDoctors) {
-    const { data: authData } = await supabase.auth.admin.createUser({
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: doc.email,
       password: 'demo123',
       email_confirm: true,
       user_metadata: { full_name: doc.full_name, role: 'doctor' },
     })
 
+    if (authError && authError.code !== 'email_exists') {
+      console.error(`Error creating doctor ${doc.email}:`, authError)
+      continue
+    }
     if (authData.user) {
+      createdUserIds[doc.email] = authData.user.id
+    }
+    const doctorUserId = createdUserIds[doc.email]
+    if (doctorUserId) {
       await supabase
         .from('doctors')
         .upsert({
-          user_id: authData.user.id,
+          user_id: doctorUserId,
           full_name: doc.full_name,
           qualifications: ['MBBS', 'MD'],
           specialization_id: doc.specialization,
@@ -162,6 +172,100 @@ async function seed() {
           profile_completion_percentage: 90,
         }, { onConflict: 'user_id' })
       console.log(`✅ Created doctor: ${doc.full_name}`)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Demo account credentials + role promotion
+  // Idempotent. Uses verified auth UIDs only (never blind email updates).
+  // Upgrade-only: an existing role is never downgraded, so a real admin can
+  // never be demoted by re-running the seed.
+  // ---------------------------------------------------------------------------
+  const { data: { users: freshUsers } } = await supabase.auth.admin.listUsers()
+  const findUserId = (email: string) =>
+    createdUserIds[email] || freshUsers.find((u) => u.email === email)?.id
+
+  const roleRank: Record<string, number> = { patient: 0, doctor: 1, admin: 2 }
+
+  const demoAccounts: { email: string; password: string; fullName: string; role: 'patient' | 'doctor' | 'admin' }[] = [
+    ...demoUsers.map((u) => ({ email: u.email, password: u.password, fullName: u.full_name, role: u.role as 'patient' | 'doctor' | 'admin' })),
+    ...moreDoctors.map((d) => ({ email: d.email, password: 'demo123', fullName: d.full_name, role: 'doctor' as const })),
+  ]
+
+  for (const acct of demoAccounts) {
+    const uid = findUserId(acct.email)
+    if (!uid) {
+      console.warn(`⚠️ Could not locate auth user for ${acct.email}; skipping`)
+      continue
+    }
+
+    // Pre-existing demo accounts: sync password to the documented demo
+    // credentials and make sure the email is confirmed (dev-only script).
+    if (!createdUserIds[acct.email]) {
+      const { error: credErr } = await supabase.auth.admin.updateUserById(uid, {
+        password: acct.password,
+        email_confirm: true,
+      })
+      if (credErr) {
+        console.error(`Could not sync credentials for ${acct.email}:`, credErr)
+      } else {
+        console.log(`🔑 Synced credentials for existing account: ${acct.email}`)
+      }
+    }
+
+    const { data: profile, error: profErr } = await supabase
+      .from('profiles')
+      .select('role, email')
+      .eq('id', uid)
+      .maybeSingle()
+
+    if (profErr) {
+      console.error(`Could not read profile for ${acct.email}:`, profErr)
+      continue
+    }
+
+    if (!profile) {
+      const { error: insErr } = await supabase.from('profiles').insert({
+        id: uid,
+        full_name: acct.fullName,
+        email: acct.email,
+        role: acct.role,
+      })
+      if (insErr) {
+        console.error(`Could not create profile for ${acct.email}:`, insErr)
+      } else {
+        console.log(`✅ Created missing profile: ${acct.email} (${acct.role})`)
+      }
+      continue
+    }
+
+    const needsPromotion =
+      profile.role !== acct.role &&
+      (roleRank[acct.role] ?? 0) > (roleRank[profile.role] ?? 0)
+
+    if (needsPromotion) {
+      const { error: promErr } = await supabase
+        .from('profiles')
+        .update({ role: acct.role, email: acct.email })
+        .eq('id', uid)
+
+      if (promErr) {
+        console.error(`Could not promote ${acct.email}:`, promErr)
+      } else {
+        console.log(`⬆️ Promoted ${acct.email}: ${profile.role} → ${acct.role} (uid ${uid})`)
+      }
+    } else if (!profile.email) {
+      // Older handle_new_profile triggers never copied email onto profiles;
+      // backfill it so admin tables show the address (role stays untouched).
+      const { error: emailErr } = await supabase
+        .from('profiles')
+        .update({ email: acct.email })
+        .eq('id', uid)
+      if (emailErr) {
+        console.error(`Could not backfill email for ${acct.email}:`, emailErr)
+      } else {
+        console.log(`✉️ Backfilled profile email: ${acct.email}`)
+      }
     }
   }
 
@@ -243,7 +347,13 @@ async function seed() {
     .eq('verification_status', 'verified')
     .limit(5)
 
-  if (patientUserId && verifiedDoctors) {
+  // Guard: never duplicate demo appointments/reviews on re-runs
+  const { count: existingPatientReviews } = await supabase
+    .from('reviews')
+    .select('*', { count: 'exact', head: true })
+    .eq('patient_id', patientUserId ?? '')
+
+  if (patientUserId && verifiedDoctors && !existingPatientReviews) {
     for (const doc of verifiedDoctors) {
       const { data: appointment } = await supabase
         .from('appointments')
@@ -277,6 +387,8 @@ async function seed() {
       }
     }
     console.log('✅ Created demo reviews')
+  } else if (existingPatientReviews) {
+    console.log(`⏭️ Reviews already seeded (${existingPatientReviews} found) — skipping`)
   }
 
   console.log('🎉 Seeding complete!')

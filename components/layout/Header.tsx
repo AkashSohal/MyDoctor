@@ -162,7 +162,7 @@ export function Header() {
                     )}
                     {user.role === 'admin' && (
                       <DropdownMenuItem asChild>
-                        <Link href="/dashboard/admin" className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg">
+                        <Link href="/admin" className="flex w-full items-center gap-3 px-3 py-2.5 rounded-lg">
                           <Shield className="h-4 w-4 text-primary-600" />
                           <span>Admin Dashboard</span>
                         </Link>
@@ -305,7 +305,7 @@ export function Header() {
                 )}
                 {user.role === 'admin' && (
                   <Link
-                    href="/dashboard/admin"
+                    href="/admin"
                     className="flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium text-secondary-600 hover:bg-secondary-100"
                     onClick={() => setMobileMenuOpen(false)}
                   >

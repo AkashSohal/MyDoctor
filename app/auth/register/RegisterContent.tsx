@@ -40,6 +40,7 @@ export function RegisterContent() {
   })
 
   const password = watch('password')
+  const selectedRole = watch('role')
 
   const onSubmit = async (data: RegisterForm) => {
     if (loading) return
@@ -110,7 +111,7 @@ export function RegisterContent() {
             <span className="text-2xl font-bold text-secondary-900">MyDoctor</span>
           </Link>
           <h1 className="text-2xl font-bold text-secondary-900">Create your account</h1>
-          <p className="text-secondary-500 mt-2">Join MyDoctor as a {role === 'doctor' ? 'doctor' : 'patient'}</p>
+          <p className="text-secondary-500 mt-2">Join MyDoctor as a {selectedRole === 'doctor' ? 'doctor' : 'patient'}</p>
         </div>
 
         <Card>
@@ -235,15 +236,12 @@ export function RegisterContent() {
 
               <div>
                 <Label>Register as</Label>
-                <Select
-                  value={role}
-                  disabled
-                >
-                  <option value="patient">Patient</option>
-                  <option value="doctor">Doctor</option>
+                <Select {...register('role')}>
+                  <option value="patient">Patient — book appointments</option>
+                  <option value="doctor">Doctor — join the platform</option>
                 </Select>
                 <p className="text-xs text-secondary-500 mt-1">
-                  {role === 'doctor' 
+                  {selectedRole === 'doctor' 
                     ? 'Doctor accounts require verification before going live' 
                     : 'Find and book appointments with verified doctors'}
                 </p>
@@ -291,7 +289,7 @@ export function RegisterContent() {
 
             <p className="text-center text-sm text-secondary-500">
               Already have an account?{' '}
-              <Link href={`/auth/login?role=${role}`} className="text-primary-600 hover:text-primary-700 font-medium">
+              <Link href={`/auth/login?role=${selectedRole}`} className="text-primary-600 hover:text-primary-700 font-medium">
                 Sign in
               </Link>
             </p>

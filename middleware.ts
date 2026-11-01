@@ -63,6 +63,7 @@ export async function middleware(request: NextRequest) {
     "/dashboard/patient",
     "/dashboard/doctor",
     "/dashboard/admin",
+    "/admin",
   ];
 
   const isProtectedRoute = protectedRoutes.some((route) =>
@@ -83,11 +84,21 @@ export async function middleware(request: NextRequest) {
     if (user) {
       const { data: profile } = await supabase
         .from("profiles")
-        .select("role")
+        .select("role, status")
         .eq("id", user.id)
         .maybeSingle();
 
       if (profile) {
+        if (pathname.startsWith("/admin")) {
+          // Admin area: verified against the trusted profiles row, and
+          // suspended accounts are locked out entirely.
+          if (profile.role !== "admin") {
+            return NextResponse.redirect(new URL("/", request.url));
+          }
+          if (profile.status === "suspended") {
+            return NextResponse.redirect(new URL("/auth/login", request.url));
+          }
+        }
         if (pathname.startsWith("/dashboard/admin") && profile.role !== "admin") {
           return NextResponse.redirect(new URL("/", request.url));
         }
@@ -118,7 +129,7 @@ export async function middleware(request: NextRequest) {
 
       if (profile) {
         const redirectMap: Record<string, string> = {
-          admin: "/dashboard/admin",
+          admin: "/admin",
           doctor: "/dashboard/doctor",
           patient: "/dashboard/patient",
         };
@@ -138,6 +149,8 @@ export const config = {
     "/dashboard/patient/:path*",
     "/dashboard/doctor/:path*",
     "/dashboard/admin/:path*",
+    "/admin",
+    "/admin/:path*",
     "/auth/login",
     "/auth/register",
     "/auth/signup",

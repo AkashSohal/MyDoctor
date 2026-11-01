@@ -58,3 +58,5 @@ Desktop.ini
 .codeartsdoer/
 skills/
 skills-lock.json
+# Debug logs
+dev*.log

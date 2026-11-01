@@ -22,7 +22,7 @@ export default async function PatientDashboardPage() {
   }
 
   const { data: profile } = await supabase
-    .from('users')
+    .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
@@ -68,7 +68,7 @@ export default async function PatientDashboardPage() {
         doctor:doctors(
           id, full_name, photo_url, specialization:specialties(name),
           experience_years, rating_average, rating_count, consultation_fee,
-          verification_status, distance_km
+          verification_status
         )
       `)
       .eq('patient_id', user.id)

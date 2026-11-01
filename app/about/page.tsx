@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { TeamMemberCard } from '@/components/about/TeamMemberCard'
 import { Shield, Heart, Users, Star, Lightbulb, Target, ArrowRight } from 'lucide-react'
 
 export const metadata: Metadata = {
@@ -42,11 +43,23 @@ const values = [
   },
 ]
 
-const team = [
-  { name: 'Dr. Priya Sharma', role: 'Chief Medical Officer', bio: '15+ years clinical experience. MBBS, MD (Internal Medicine). Passionate about patient-centered care.' },
-  { name: 'Rahul Gupta', role: 'CEO & Co-founder', bio: 'Former product lead at major health tech startup. MBA from IIM. Building accessible healthcare for all.' },
-  { name: 'Anita Desai', role: 'CTO & Co-founder', bio: 'Ex-Google engineer. MS Computer Science. Architect of scalable health platforms serving millions.' },
-  { name: 'Dr. Vikram Patel', role: 'Medical Advisory Board', bio: 'Renowned cardiologist. Padma Shri awardee. Committed to ethical healthcare standards.' },
+type TeamMember = {
+  name: string
+  initials: string
+  badge?: 'Team Leader' | 'Senior Guide'
+}
+
+const seniorGuide: TeamMember = {
+  name: 'Prof. Netravati Sawale',
+  initials: 'NS',
+  badge: 'Senior Guide',
+}
+
+const team: TeamMember[] = [
+  { name: 'Akashdeep Singh', initials: 'AS', badge: 'Team Leader' },
+  { name: 'Simar Singh', initials: 'SS' },
+  { name: 'Amrinder Kaur', initials: 'AK' },
+  { name: 'Anshu Maria Zoya', initials: 'AZ' },
 ]
 
 export default function AboutPage() {
@@ -71,7 +84,7 @@ export default function AboutPage() {
               <Link href="/doctors">
                 <Button size="lg">Find a Doctor</Button>
               </Link>
-              <Link href="/doctor/onboarding">
+              <Link href="/auth/register?role=doctor">
                 <Button size="lg" variant="outline">Join as a Doctor</Button>
               </Link>
             </div>
@@ -156,23 +169,38 @@ export default function AboutPage() {
       {/* Team */}
       <section className="section bg-white">
         <div className="container">
-          <div className="text-center max-w-2xl mx-auto mb-16">
-            <h2 className="text-3xl font-bold text-secondary-900 mb-4">Meet Our Team</h2>
-            <p className="text-lg text-secondary-600">Healthcare professionals and technologists united by a common mission</p>
+          <div className="text-center max-w-2xl mx-auto mb-12">
+            <h2 className="text-3xl font-bold text-secondary-900 mb-4">
+              Meet Our <span className="text-gradient">Team</span>
+            </h2>
+            <div
+              className="mx-auto mb-4 h-1 w-16 rounded-full bg-gradient-to-r from-primary-500 to-primary-600"
+              aria-hidden="true"
+            />
+            <p className="text-lg text-secondary-600">
+              Together, we are building a smarter, more accessible healthcare experience.
+            </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <div className="mb-14 flex justify-center">
+            <TeamMemberCard
+              name={seniorGuide.name}
+              initials={seniorGuide.initials}
+              badge={seniorGuide.badge}
+              featured
+              className="w-full max-w-md"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {team.map((member) => (
-              <Card key={member.name} className="text-center">
-                <CardContent className="p-6">
-                  <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center mx-auto mb-4 text-primary-600 text-2xl font-bold">
-                    {member.name.split(' ').map(n => n[0]).join('')}
-                  </div>
-                  <h3 className="font-semibold text-secondary-900">{member.name}</h3>
-                  <p className="text-primary-600 text-sm mb-2">{member.role}</p>
-                  <p className="text-secondary-500 text-sm">{member.bio}</p>
-                </CardContent>
-              </Card>
+              <TeamMemberCard
+                key={member.name}
+                name={member.name}
+                initials={member.initials}
+                badge={member.badge}
+                className="mx-auto w-full max-w-sm sm:max-w-none"
+              />
             ))}
           </div>
         </div>
@@ -191,7 +219,7 @@ export default function AboutPage() {
                 Find Doctors Now
               </Button>
             </Link>
-            <Link href="/doctor/onboarding">
+            <Link href="/auth/register?role=doctor">
               <Button size="lg" variant="outline" className="w-full sm:w-auto border-white text-white hover:bg-primary-700 px-8">
                 Are You a Doctor?
               </Button>
