@@ -349,3 +349,13 @@ export function useAuth() {
   }
   return context
 }
+
+/**
+ * Like useAuth, but returns undefined outside an AuthProvider instead of
+ * throwing. Used by emergency-module hooks so they can also be rendered in
+ * isolation (smoke tests, storybook-style previews) where they simply behave
+ * as "signed out".
+ */
+export function useOptionalAuth(): AuthContextType | undefined {
+  return useContext(AuthContext)
+}

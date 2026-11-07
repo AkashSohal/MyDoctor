@@ -14,7 +14,7 @@ import {
   DropdownMenuSeparator 
 } from '@/components/ui/dropdown'
 import { Avatar } from '@/components/ui/avatar'
-import { Menu, X, User, LogOut, Settings, Stethoscope, Building2, Heart, HelpCircle, LayoutDashboard, Shield, Home, Calendar } from 'lucide-react'
+import { Menu, X, User, LogOut, Settings, Stethoscope, Building2, Heart, HelpCircle, LayoutDashboard, Shield, Home, Calendar, Siren } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 const navigation = [
@@ -23,6 +23,7 @@ const navigation = [
   { name: 'Specialties', href: '/specialties', icon: Heart },
   { name: 'Hospitals & Clinics', href: '/hospitals', icon: Building2 },
   { name: 'How It Works', href: '/how-it-works', icon: HelpCircle },
+  { name: 'Emergency', href: '/emergency', icon: Siren, emergency: true },
 ]
 
 export function Header() {
@@ -64,7 +65,7 @@ export function Header() {
     )}>
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Main navigation">
         <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center">
+          <div className="flex items-center shrink-0">
             <Link href="/" className="flex items-center space-x-2.5 group" aria-label="MyDoctor Home">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 shadow-md group-hover:shadow-glow transition-all duration-300 group-hover:scale-105">
                 <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
@@ -77,16 +78,20 @@ export function Header() {
             </Link>
           </div>
 
-          <div className="hidden lg:flex lg:items-center lg:space-x-1">
+          <div className="hidden lg:flex lg:min-w-0 lg:items-center lg:space-x-1 lg:overflow-x-auto lg:scrollbar-hide">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
+                  'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
                   pathname === item.href
-                    ? 'bg-primary-100/80 text-primary-700 shadow-sm'
-                    : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
+                    ? item.emergency
+                      ? 'bg-red-50 text-red-700 shadow-sm'
+                      : 'bg-primary-100/80 text-primary-700 shadow-sm'
+                    : item.emergency
+                      ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+                      : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
                 )}
               >
                 <item.icon className="h-4 w-4" aria-hidden="true" />
@@ -95,7 +100,7 @@ export function Header() {
             ))}
           </div>
 
-          <div className="hidden lg:flex lg:items-center lg:space-x-3">
+          <div className="hidden lg:flex lg:shrink-0 lg:items-center lg:space-x-3">
             {loading ? (
               <div className="flex items-center gap-3">
                 <div className="h-10 w-20 animate-pulse rounded-xl bg-secondary-200" />
@@ -246,8 +251,12 @@ export function Header() {
                 className={cn(
                   'flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all duration-200',
                   pathname === item.href
-                    ? 'bg-primary-100/80 text-primary-700'
-                    : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
+                    ? item.emergency
+                      ? 'bg-red-50 text-red-700'
+                      : 'bg-primary-100/80 text-primary-700'
+                    : item.emergency
+                      ? 'text-red-600 hover:bg-red-50'
+                      : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
               >

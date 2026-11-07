@@ -1,7 +1,6 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
-import { unstable_cache } from 'next/cache'
-import { createPublicClient } from '@/utils/supabase/public'
+import { getHospitalList } from '@/lib/hospitals/list'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Building2, MapPin, Phone, ArrowRight, Users, BadgeCheck } from 'lucide-react'
@@ -14,53 +13,8 @@ export const metadata: Metadata = {
 // Public listing data — cached and revalidated in the background.
 export const revalidate = 300
 
-const HOSPITAL_LIST_SELECT = `
-  id, name, address, phone, website, latitude, longitude, city, state, verification_status,
-  doctors:doctor_hospitals(count)
-`
-
-const HOSPITAL_LIST_SELECT_BASIC = `
-  id, name, address, phone, website, latitude, longitude,
-  doctors:doctor_hospitals(count)
-`
-
-const getHospitals = unstable_cache(
-  async () => {
-    const supabase = createPublicClient()
-    // Only verified facilities are listed publicly. Falls back to the
-    // unfiltered query if the verification migration is not applied yet.
-    let result: any = await supabase
-      .from('hospitals')
-      .select(HOSPITAL_LIST_SELECT)
-      .eq('verification_status', 'verified')
-      .order('name')
-    if (result.error) {
-      result = await supabase
-        .from('hospitals')
-        .select(HOSPITAL_LIST_SELECT_BASIC)
-        .order('name')
-    }
-    if (result.error) return []
-    return (result.data ?? []) as Array<{
-      id: string
-      name: string
-      address: string
-      phone?: string | null
-      website?: string | null
-      latitude?: number | null
-      longitude?: number | null
-      city?: string | null
-      state?: string | null
-      verification_status?: string | null
-      doctors?: Array<{ count: number }>
-    }>
-  },
-  ['hospitals-list'],
-  { revalidate: 300, tags: ['hospitals'] }
-)
-
 export default async function HospitalsPage() {
-  const hospitals = await getHospitals()
+  const hospitals = await getHospitalList()
 
   return (
     <div className="min-h-screen bg-secondary-50">

@@ -9,6 +9,7 @@ const footerLinks = {
     { name: 'Specialties', href: '/specialties' },
     { name: 'Hospitals & Clinics', href: '/hospitals' },
     { name: 'How It Works', href: '/how-it-works' },
+    { name: 'Emergency Assistance', href: '/emergency' },
   ],
   company: [
     { name: 'About Us', href: '/about' },
