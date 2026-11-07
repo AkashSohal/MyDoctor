@@ -7,8 +7,16 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
-import { MapPin, Clock, Star, CheckCircle, Stethoscope, Heart, Phone, Calendar, ArrowRight } from 'lucide-react'
+import { MapPin, Clock, Star, CheckCircle, Stethoscope, Heart, Phone, Calendar, ArrowRight, GitCompare } from 'lucide-react'
 import { Doctor } from '@/lib/types'
+import {
+  formatExperienceYears,
+  formatDoctorName,
+  getDoctorDescription,
+  getSpecializationName,
+  getNextAvailableSlot,
+  isAvailableToday,
+} from '@/lib/utils/doctor'
 
 interface DoctorCardProps {
   doctor: Doctor
@@ -40,40 +48,12 @@ export function DoctorCard({
   const distance = doctor.distance_km
   const matchScore = doctor.match_score
 
-  const isAvailableToday = doctor.availability?.some(a => {
-    const today = new Date().getDay()
-    return a.day_of_week === today && a.is_active
-  })
+  const specializationName = getSpecializationName(doctor)
+  const description = getDoctorDescription(doctor)
+  const experienceLabel = formatExperienceYears(doctor.experience_years)
 
-  const nextSlot = React.useMemo(() => {
-    const slots = doctor.availability?.filter(a => a.is_active) || []
-    if (slots.length === 0) return null
-
-    const now = new Date()
-    const today = now.getDay()
-    const nowMinutes = now.getHours() * 60 + now.getMinutes()
-    const toMinutes = (time: string) => {
-      const [h, m] = time.split(':').map(Number)
-      return h * 60 + (m || 0)
-    }
-    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-
-    for (let offset = 0; offset < 7; offset++) {
-      const day = (today + offset) % 7
-      const candidate = slots
-        .filter(a => a.day_of_week === day)
-        .filter(a => (offset === 0 ? toMinutes(a.start_time) >= nowMinutes : true))
-        .sort((a, b) => a.start_time.localeCompare(b.start_time))[0]
-      if (candidate) {
-        const label = offset === 0 ? 'Today' : offset === 1 ? 'Tomorrow' : dayNames[day]
-        const [hours, minutes] = candidate.start_time.split(':')
-        const hour = parseInt(hours, 10)
-        const ampm = hour >= 12 ? 'PM' : 'AM'
-        return `${label} ${hour % 12 || 12}:${minutes} ${ampm}`
-      }
-    }
-    return null
-  }, [doctor.availability])
+  const availableToday = isAvailableToday(doctor.availability)
+  const nextSlot = React.useMemo(() => getNextAvailableSlot(doctor.availability), [doctor.availability])
 
   if (variant === 'compact') {
     return (
@@ -86,7 +66,7 @@ export function DoctorCard({
               <Badge variant="success" size="sm">Verified</Badge>
             )}
           </div>
-          <p className="text-sm text-secondary-500 truncate">{doctor.specialization?.name || 'Specialist'}</p>
+          <p className="text-sm text-secondary-500 truncate">{specializationName}</p>
           <div className="flex items-center gap-3 mt-1 text-xs text-secondary-500">
             {doctor.rating_average > 0 && (
               <span className="flex items-center gap-1">
@@ -120,7 +100,7 @@ export function DoctorCard({
               <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="md" />
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-secondary-900 truncate">{doctor.full_name}</h3>
-                <p className="text-sm text-secondary-500 truncate">{doctor.specialization?.name || 'Specialist'}</p>
+                <p className="text-sm text-secondary-500 truncate">{specializationName}</p>
                 <div className="flex items-center gap-2 mt-1 text-xs text-secondary-500">
                   {doctor.rating_average > 0 && (
                     <span className="flex items-center gap-1">
@@ -185,7 +165,7 @@ export function DoctorCard({
               size="xl" 
               className="ring-4 ring-secondary-100 group-hover:ring-primary-100 transition-all duration-300"
             />
-            {isAvailableToday && (
+            {availableToday && (
               <div className="absolute -bottom-1 -right-1 flex items-center gap-1 px-2 py-0.5 bg-green-500 text-white text-xs font-medium rounded-full shadow-md">
                 <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
                 Available
@@ -197,7 +177,7 @@ export function DoctorCard({
             {/* Name and badges */}
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h3 className="text-xl font-bold text-secondary-900 group-hover:text-primary-600 transition-colors">
-                Dr. {doctor.full_name}
+                {formatDoctorName(doctor.full_name)}
               </h3>
               {doctor.verification_status === 'verified' && (
                 <Badge variant="success" className="gap-1 bg-gradient-to-r from-green-500 to-emerald-500 text-white border-0">
@@ -224,7 +204,7 @@ export function DoctorCard({
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary-50 text-primary-700 text-sm font-medium">
                 <Stethoscope className="h-4 w-4" />
-                {doctor.specialization?.name || 'Specialist'}
+                {specializationName}
               </span>
               {doctor.qualifications && doctor.qualifications.length > 0 && (
                 <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
@@ -232,7 +212,7 @@ export function DoctorCard({
                 </span>
               )}
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
-                {doctor.experience_years} years exp
+                {experienceLabel}
               </span>
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-secondary-100 text-secondary-700 text-sm">
                 ₹{doctor.consultation_fee}
@@ -267,10 +247,8 @@ export function DoctorCard({
               </div>
             )}
 
-            {/* Bio */}
-            {doctor.bio && (
-              <p className="text-sm text-secondary-500 line-clamp-2 mb-4">{doctor.bio}</p>
-            )}
+            {/* Description — never exposes raw ids, falls back to a safe headline */}
+            <p className="text-sm text-secondary-500 line-clamp-2 mb-4">{description}</p>
           </div>
         </div>
 
@@ -315,9 +293,11 @@ export function DoctorCard({
               variant={compared ? 'default' : 'outline'}
               size="sm"
               onClick={onCompare}
+              aria-pressed={compared}
               className="gap-1.5"
             >
-              {compared ? 'Compared' : 'Compare'}
+              <GitCompare className="h-4 w-4" />
+              {compared ? 'Added' : 'Compare'}
             </Button>
           )}
         </div>

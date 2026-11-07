@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/utils/supabase/client'
 import { formatDate, formatTime, cn } from '@/lib/utils'
+import { formatDoctorName, formatExperienceYears } from '@/lib/utils/doctor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -60,10 +61,23 @@ export function NewAppointmentContent() {
       // Fetch hospitals via junction table
       const { data: doctorHospitals } = await supabase
         .from('doctor_hospitals')
-        .select('hospital:hospitals(id, name, address, latitude, longitude)')
+        .select('hospital:hospitals(id, name, address, latitude, longitude, verification_status, is_active)')
         .eq('doctor_id', doctorId)
 
-      const hospitalsList = (doctorHospitals?.map(dh => dh.hospital).filter(Boolean) || []) as unknown as Hospital[]
+      type BookableHospital = Hospital & {
+        verification_status?: string | null
+        is_active?: boolean | null
+      }
+      const hospitalsList = (
+        (doctorHospitals || []) as unknown as Array<{ hospital: BookableHospital | null }>
+      )
+        .map((dh) => dh.hospital)
+        .filter(
+          (hospital): hospital is BookableHospital =>
+            Boolean(hospital) &&
+            hospital?.verification_status === 'verified' &&
+            hospital.is_active !== false
+        ) as Hospital[]
       
       setDoctor(data)
       setHospitals(hospitalsList)
@@ -264,12 +278,12 @@ export function NewAppointmentContent() {
                   <div className="flex items-start gap-4">
                     <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" />
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-secondary-900">Dr. {doctor.full_name}</h3>
+                      <h3 className="text-lg font-semibold text-secondary-900">{formatDoctorName(doctor.full_name)}</h3>
                       <p className="text-secondary-500">{doctor.specialization?.name || 'Specialist'}</p>
                       <div className="flex flex-wrap gap-3 mt-2 text-sm text-secondary-600">
                         <span className="flex items-center gap-1">
                           <Stethoscope className="h-4 w-4" />
-                          {doctor.experience_years} years exp
+                          {formatExperienceYears(doctor.experience_years)}
                         </span>
                         <span className="flex items-center gap-1">
                           <Building2 className="h-4 w-4" />
@@ -503,7 +517,7 @@ export function NewAppointmentContent() {
                       <div className="space-y-2 text-sm">
                         <div className="flex justify-between">
                           <span className="text-secondary-600">Doctor</span>
-                          <span className="font-medium">Dr. {doctor.full_name}</span>
+                          <span className="font-medium">{formatDoctorName(doctor.full_name)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span className="text-secondary-600">Hospital</span>
@@ -558,7 +572,7 @@ export function NewAppointmentContent() {
                     {bookedStatus === 'confirmed' ? 'Appointment Confirmed' : 'Appointment Request Submitted'}
                   </h3>
                   <p className="text-secondary-500 mb-4">
-                    Your {bookedStatus === 'confirmed' ? 'appointment' : 'request'} with Dr. {doctor?.full_name} for{' '}
+                    Your {bookedStatus === 'confirmed' ? 'appointment' : 'request'} with {formatDoctorName(doctor?.full_name)} for{' '}
                     {selectedDate ? formatDate(selectedDate) : 'the selected date'} at{' '}
                     {selectedSlot ? formatTime(selectedSlot) : 'the selected time'} has been
                     {bookedStatus === 'confirmed' ? ' confirmed.' : ' received.'}

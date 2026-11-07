@@ -3,6 +3,12 @@ import { notFound } from 'next/navigation'
 import { unstable_cache } from 'next/cache'
 import { createPublicClient } from '@/utils/supabase/public'
 import { Doctor } from '@/lib/types'
+import {
+  containsRawId,
+  formatDoctorName,
+  formatExperienceYears,
+  getSpecializationName,
+} from '@/lib/utils/doctor'
 import { DoctorProfileClient } from './DoctorProfileClient'
 
 interface Props {
@@ -16,8 +22,20 @@ const DOCTOR_COLUMNS = `
   *,
   specialization:specialties(id, name, description),
   availability(id, doctor_id, hospital_id, day_of_week, start_time, end_time, is_active),
-  doctor_hospitals(hospital:hospitals(id, name, address, latitude, longitude, phone, website))
+  doctor_hospitals(hospital:hospitals(id, name, address, latitude, longitude, phone, website, verification_status, is_active))
 `
+
+type PublicHospital = {
+  id: string
+  name: string
+  address: string
+  latitude?: number | null
+  longitude?: number | null
+  phone?: string | null
+  website?: string | null
+  verification_status?: string | null
+  is_active?: boolean | null
+}
 
 async function fetchDoctorProfile(id: string) {
   const supabase = createPublicClient()
@@ -30,9 +48,17 @@ async function fetchDoctorProfile(id: string) {
 
   if (error || !data) return null
 
-  const hospitals = (data.doctor_hospitals ?? [])
-    .map((dh: { hospital: { id: string } | null }) => dh.hospital)
-    .filter(Boolean)
+  const affiliations = (data.doctor_hospitals ?? []) as Array<{
+    hospital: PublicHospital | null
+  }>
+  const hospitals = affiliations
+    .map((dh) => dh.hospital)
+    .filter(
+      (hospital): hospital is PublicHospital =>
+        Boolean(hospital) &&
+        hospital?.verification_status === 'verified' &&
+        hospital.is_active !== false
+    )
 
   const { doctor_hospitals: _junction, ...doctor } = data
   return { ...doctor, hospitals } as Doctor
@@ -55,12 +81,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return { title: 'Doctor Not Found | MyDoctor' }
   }
 
-  const specialization = Array.isArray(doctor.specialization)
-    ? doctor.specialization[0]
-    : doctor.specialization
+  const specializationName = getSpecializationName(doctor)
+  const title = `${formatDoctorName(doctor.full_name)} | ${specializationName} | MyDoctor`
 
-  const title = `Dr. ${doctor.full_name} | ${specialization?.name || 'Specialist'} | MyDoctor`
-  const description = doctor.bio || `Book an appointment with Dr. ${doctor.full_name}, ${specialization?.name || 'Specialist'}. Verified doctor with ${doctor.qualifications?.join(', ') || 'medical qualifications'}.`
+  // Never surface a raw bio that leaked an internal id (e.g. a specialization
+  // UUID) — build a safe description from the real specialization + experience.
+  const bio = typeof doctor.bio === 'string' ? doctor.bio.trim() : ''
+  const years =
+    typeof doctor.experience_years === 'number' && Number.isFinite(doctor.experience_years)
+      ? Math.round(doctor.experience_years)
+      : 0
+  const description = bio && !containsRawId(bio)
+    ? bio
+    : `Book an appointment with ${formatDoctorName(doctor.full_name)}, ${specializationName}. ${
+        years > 0 ? `${formatExperienceYears(years)}. ` : ''
+      }Verified doctor on MyDoctor.`
 
   return {
     title,

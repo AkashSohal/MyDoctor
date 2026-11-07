@@ -44,12 +44,20 @@ export function optionalUuid(value: unknown, field: string): string | null {
 }
 
 const DOCTOR_STATUSES = ['pending', 'verified', 'rejected', 'suspended'] as const
+const HOSPITAL_STATUSES = ['pending', 'verified', 'rejected'] as const
 const APPOINTMENT_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed'] as const
 const PATIENT_STATUSES = ['active', 'suspended'] as const
 
 export function assertDoctorStatus(value: unknown): string {
   if (typeof value !== 'string' || !DOCTOR_STATUSES.includes(value as never)) {
     throw new Error('Invalid doctor verification status')
+  }
+  return value
+}
+
+export function assertHospitalStatus(value: unknown): string {
+  if (typeof value !== 'string' || !HOSPITAL_STATUSES.includes(value as never)) {
+    throw new Error('Invalid hospital verification status')
   }
   return value
 }

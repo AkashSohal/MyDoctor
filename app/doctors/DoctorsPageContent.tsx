@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/common/ErrorState'
 import { Button } from '@/components/ui/button'
 import { useDoctorSearch } from '@/lib/hooks/useDoctorSearch'
 import { useGeolocation } from '@/lib/hooks/useGeolocation'
+import { useDoctorCompare, toCompareDoctor } from '@/lib/hooks/useDoctorCompare'
 import { MapPin, Filter, List, Map, ChevronDown, X } from 'lucide-react'
 import { SPECIALTIES } from '@/lib/constants'
 import { SearchFilters } from '@/lib/types'
@@ -22,10 +23,10 @@ export function DoctorsPageContent() {
   const searchParams = useSearchParams()
   const router = useRouter()
   const { latitude, longitude, getCurrentPosition, loading: locationLoading } = useGeolocation()
-  
+  const { isSelected: isCompared, toggle: toggleCompare } = useDoctorCompare()
+
   const [viewMode, setViewMode] = useState<'list' | 'map'>('list')
   const [filtersOpen, setFiltersOpen] = React.useState(false)
-  const [selectedDoctor, setSelectedDoctor] = React.useState<string | null>(null)
   const [searchQuery, setSearchQuery] = React.useState(searchParams.get('q') || '')
   const [sortBy, setSortBy] = React.useState<SearchFilters['sort_by']>(searchParams.get('sort_by') as SearchFilters['sort_by'] || 'best_match')
   const [currentFilters, setCurrentFilters] = React.useState<SearchFilters>({
@@ -59,7 +60,12 @@ export function DoctorsPageContent() {
     const fetchHospitals = async () => {
       const { createClient } = await import('@/utils/supabase/client')
       const supabase = createClient()
-      const { data } = await supabase.from('hospitals').select('id, name').order('name')
+      const { data } = await supabase
+        .from('hospitals')
+        .select('id, name')
+        .eq('verification_status', 'verified')
+        .eq('is_active', true)
+        .order('name')
       if (data) setHospitals(data)
     }
     fetchHospitals()
@@ -283,8 +289,8 @@ export function DoctorsPageContent() {
                         onCall={() => window.open(`tel:+91${doctor.hospitals?.[0]?.phone || ''}`, '_self')}
                         onBookAppointment={() => router.push(`/appointments/new?doctor=${doctor.id}`)}
                         showCompare
-                        compared={selectedDoctor === doctor.id}
-                        onCompare={() => setSelectedDoctor(selectedDoctor === doctor.id ? null : doctor.id)}
+                        compared={isCompared(doctor.id)}
+                        onCompare={() => toggleCompare(toCompareDoctor(doctor))}
                       />
                     </div>
                   ))}

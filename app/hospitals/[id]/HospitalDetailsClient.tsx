@@ -14,6 +14,7 @@ import { Avatar } from '@/components/ui/avatar'
 import { RatingStars } from '@/components/common/RatingStars'
 import { ScrollReveal } from '@/components/common/ScrollReveal'
 import { cn, formatCurrency } from '@/lib/utils'
+import { formatDoctorName, formatExperienceYears } from '@/lib/utils/doctor'
 
 export interface HospitalDoctor {
   id: string
@@ -39,6 +40,7 @@ export interface HospitalDetails {
   phone?: string | null
   website?: string | null
   email?: string | null
+  verification_status?: string | null
   doctors: HospitalDoctor[]
 }
 
@@ -109,8 +111,17 @@ export function HospitalDetailsClient({ hospital }: HospitalDetailsClientProps) 
             <div className="flex-1 text-white">
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">{hospital.name}</h1>
-                {doctors.length > 0 && (
-                  <Badge className="gap-1.5 bg-white/20 backdrop-blur-sm text-white border-white/30" title="Doctors at this facility are verified on MyDoctor">
+                {(hospital.verification_status
+                  ? hospital.verification_status === 'verified'
+                  : doctors.length > 0) && (
+                  <Badge
+                    className="gap-1.5 bg-white/20 backdrop-blur-sm text-white border-white/30"
+                    title={
+                      hospital.verification_status
+                        ? 'This facility is verified by MyDoctor'
+                        : 'Doctors at this facility are verified on MyDoctor'
+                    }
+                  >
                     <BadgeCheck className="h-4 w-4" />
                     Verified Facility
                   </Badge>
@@ -258,7 +269,7 @@ export function HospitalDetailsClient({ hospital }: HospitalDetailsClientProps) 
                                 href={`/doctors/${doctor.id}`}
                                 className="font-semibold text-secondary-900 hover:text-primary-600 transition-colors"
                               >
-                                Dr. {doctor.full_name}
+                                {formatDoctorName(doctor.full_name)}
                               </Link>
                               <p className="text-sm text-secondary-500 mt-0.5">
                                 {spec?.name || 'Specialist'}
@@ -266,7 +277,7 @@ export function HospitalDetailsClient({ hospital }: HospitalDetailsClientProps) 
                               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-secondary-500">
                                 <span className="flex items-center gap-1">
                                   <Award className="h-3.5 w-3.5" />
-                                  {doctor.experience_years} yrs exp
+                                  {formatExperienceYears(doctor.experience_years)}
                                 </span>
                                 <span className="flex items-center gap-1">
                                   <GraduationCap className="h-3.5 w-3.5" />

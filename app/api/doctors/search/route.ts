@@ -1,6 +1,8 @@
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { NextRequest, NextResponse } from 'next/server'
+import { DOCTOR_SEARCH_COLUMNS } from '@/lib/doctors/columns'
+import { getSafeBio } from '@/lib/utils/doctor'
 
 // Search results contain only public directory data (no user/private rows),
 // so responses may be shared-cached briefly at the CDN/edge.
@@ -9,34 +11,6 @@ export const dynamic = 'force-dynamic'
 const SEARCH_CACHE_HEADER = 'public, s-maxage=30, stale-while-revalidate=60'
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-
-const DOCTOR_SEARCH_COLUMNS = `
-  id,
-  user_id,
-  full_name,
-  photo_url,
-  bio,
-  qualifications,
-  specialization_id,
-  experience_years,
-  gender,
-  languages,
-  consultation_fee,
-  latitude,
-  longitude,
-  address,
-  medical_registration_number,
-  registration_council,
-  verification_status,
-  rating_average,
-  rating_count,
-  verified_review_count,
-  profile_completion_percentage,
-  created_at,
-  updated_at,
-  specialization:specialties(name),
-  availability(id, doctor_id, hospital_id, day_of_week, start_time, end_time, is_active)
-`
 
 function sanitizeQuery(q: string): string {
   return q.replace(/[,(){}"'\\]/g, ' ').trim().slice(0, 100)
@@ -284,18 +258,27 @@ export async function GET(request: NextRequest) {
     if (doctorIds.length > 0) {
       const { data } = await supabase
         .from('doctor_hospitals')
-        .select('doctor_id, hospital:hospitals(id, name, address, latitude, longitude, phone)')
+        .select(
+          'doctor_id, hospital:hospitals(id, name, address, latitude, longitude, phone, verification_status, is_active)'
+        )
         .in('doctor_id', doctorIds)
       doctorHospitals = (data ?? []) as Array<{ doctor_id: string; hospital: any }>
     }
 
-    // Attach hospitals to doctors
+    // Attach only verified, active hospitals to doctors (and drop any bio that
+    // leaked an internal id). Pending submissions must not appear publicly.
     const doctorsWithHospitals =
       doctors?.map((doctor) => ({
         ...doctor,
+        bio: getSafeBio(doctor.bio),
         hospitals:
           doctorHospitals
-            ?.filter((dh) => dh.doctor_id === doctor.id)
+            ?.filter(
+              (dh) =>
+                dh.doctor_id === doctor.id &&
+                dh.hospital?.verification_status === 'verified' &&
+                dh.hospital.is_active !== false
+            )
             .map((dh) => dh.hospital) || [],
       })) || []
 

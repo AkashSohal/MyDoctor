@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { formatDate, formatTime } from '@/lib/utils'
+import { formatDoctorName } from '@/lib/utils/doctor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -214,7 +215,7 @@ export function PatientDashboardClient({
                           />
                           <div>
                             <h3 className="font-semibold text-secondary-900">
-                              Dr. {appointment.doctor?.full_name}
+                              {formatDoctorName(appointment.doctor?.full_name)}
                             </h3>
                             <p className="text-sm text-secondary-500">
                               {appointment.doctor?.specialization?.name || 'Specialist'}
@@ -272,7 +273,7 @@ export function PatientDashboardClient({
                           />
                           <div>
                             <h3 className="font-semibold text-secondary-900">
-                              Dr. {appointment.doctor?.full_name}
+                              {formatDoctorName(appointment.doctor?.full_name)}
                             </h3>
                             <p className="text-sm text-secondary-500">
                               {appointment.doctor?.specialization?.name || 'Specialist'}
@@ -327,7 +328,7 @@ export function PatientDashboardClient({
                         />
                         <div className="flex-1 min-w-0">
                           <h3 className="font-medium text-secondary-900 truncate">
-                            Dr. {doctor.full_name}
+                            {formatDoctorName(doctor.full_name)}
                           </h3>
                           <p className="text-sm text-secondary-500 truncate">
                             {doctor.specialization?.name || 'Specialist'}
@@ -386,7 +387,7 @@ export function PatientDashboardClient({
                           />
                           <div>
                             <h3 className="font-semibold text-secondary-900">
-                              Dr. {review.doctor?.full_name}
+                              {formatDoctorName(review.doctor?.full_name)}
                             </h3>
                             <p className="text-sm text-secondary-500">
                               {review.doctor?.specialization?.name || 'Specialist'}

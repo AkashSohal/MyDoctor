@@ -60,3 +60,6 @@ skills/
 skills-lock.json
 # Debug logs
 dev*.log
+
+# Supabase CLI temp state
+supabase/.temp/

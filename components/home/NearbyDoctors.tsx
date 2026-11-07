@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Select } from '@/components/ui/select'
 import { Doctor } from '@/lib/types'
 import { DISTANCE_FILTERS } from '@/lib/constants'
+import { useDoctorCompare, toCompareDoctor } from '@/lib/hooks/useDoctorCompare'
 import {
   ArrowRight,
   Crosshair,
@@ -61,6 +62,7 @@ const EMPTY_FILTERS: Filters = {
 
 export function NearbyDoctors({ specialties }: NearbyDoctorsProps) {
   const router = useRouter()
+  const { isSelected: isCompared, toggle: toggleCompare } = useDoctorCompare()
   const [filters, setFilters] = React.useState<Filters>(EMPTY_FILTERS)
   const [coords, setCoords] = React.useState<{ lat: number; lng: number } | null>(null)
   const [locating, setLocating] = React.useState(false)
@@ -330,6 +332,9 @@ export function NearbyDoctors({ specialties }: NearbyDoctorsProps) {
                     userLocation={coords}
                     onViewProfile={() => router.push(`/doctors/${doctor.id}`)}
                     onBookAppointment={() => router.push(`/appointments/new?doctor=${doctor.id}`)}
+                    showCompare
+                    compared={isCompared(doctor.id)}
+                    onCompare={() => toggleCompare(toCompareDoctor(doctor))}
                   />
                 </div>
               ))}

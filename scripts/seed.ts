@@ -131,6 +131,11 @@ async function seed() {
     },
   ]
 
+  // Specialization ids must never leak into user-facing text — resolve the
+  // real specialty name from the specialties table before writing bios.
+  const { data: specialtyRows } = await supabase.from('specialties').select('id, name')
+  const specialtyNameById = new Map((specialtyRows ?? []).map((s) => [s.id, s.name]))
+
   for (const doc of moreDoctors) {
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email: doc.email,
@@ -158,7 +163,7 @@ async function seed() {
           experience_years: doc.experience,
           gender: 'male',
           languages: ['English', 'Hindi'],
-          bio: `Experienced ${doc.specialization} with ${doc.experience} years of practice.`,
+          bio: `Experienced ${specialtyNameById.get(doc.specialization) || 'Medical Specialist'} with ${doc.experience} years of experience.`,
           consultation_fee: doc.fee,
           latitude: doc.lat,
           longitude: doc.lng,

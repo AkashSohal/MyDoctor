@@ -15,11 +15,29 @@ const DOCTOR_COLUMNS = `
 export async function fetchHospitalDetails(id: string): Promise<HospitalDetails | null> {
   const supabase = createPublicClient()
 
-  const { data: hospital, error: hospitalError } = await supabase
+  let hospitalQuery: any = supabase
     .from('hospitals')
-    .select('id, name, address, latitude, longitude, phone, website, email')
+    .select(
+      'id, name, address, latitude, longitude, phone, website, email, verification_status, is_active'
+    )
     .eq('id', id)
-    .single()
+    .eq('verification_status', 'verified')
+    .eq('is_active', true)
+    .maybeSingle()
+  let { data: hospital, error: hospitalError } = await hospitalQuery
+
+  // Fall back only when the verification/is_active columns do not exist yet.
+  // A pending or inactive hospital must still return null, not fall through to
+  // an unfiltered lookup.
+  if (hospitalError && /verification_status|is_active|column/i.test(hospitalError.message)) {
+    const fallback = await supabase
+      .from('hospitals')
+      .select('id, name, address, latitude, longitude, phone, website, email')
+      .eq('id', id)
+      .maybeSingle()
+    hospital = fallback.data
+    hospitalError = fallback.error
+  }
 
   if (hospitalError || !hospital) return null
 

@@ -1,11 +1,12 @@
 'use server'
 
-import { revalidatePath } from 'next/cache'
+import { revalidatePath, revalidateTag } from 'next/cache'
 import { getAdminContext } from '@/lib/admin/auth'
 import { logAdminAction } from '@/lib/admin/audit'
 import {
   assertAppointmentStatus,
   assertDoctorStatus,
+  assertHospitalStatus,
   assertPatientStatus,
   fail,
   ok,
@@ -249,7 +250,10 @@ export async function createHospital(input: HospitalInput): Promise<ActionResult
   return run(async ({ supabase, userId }) => {
     const payload = parseHospitalInput(input)
     const { data, error } = await supabase.from('hospitals').insert(payload).select('id').single()
-    if (error) return fail(error.message)
+    if (error) {
+      if (error.code === '23505') return fail('A hospital with this name and address already exists')
+      return fail(error.message)
+    }
 
     const specialtyIds = Array.isArray(input.specialty_ids)
       ? (input.specialty_ids as unknown[]).filter((v): v is string => typeof v === 'string')
@@ -337,6 +341,45 @@ export async function deleteHospital(id: string): Promise<ActionResult> {
     })
 
     revalidateAdmin('/admin/hospitals', '/admin')
+    return ok()
+  })
+}
+
+// Hospital verification (Part 1) — used by the admin verification page.
+// Hospitals submitted by doctors start as 'pending'; only admins can move
+// them to 'verified' / 'rejected' (enforced again by the DB trigger).
+export async function setHospitalVerification(
+  hospitalId: string,
+  status: string,
+  reason?: string
+): Promise<ActionResult> {
+  return run(async ({ supabase, userId }) => {
+    const nextStatus = assertHospitalStatus(status)
+    const safeReason = optionalString(reason, 1000)
+
+    const { data: hospital, error: fetchError } = await supabase
+      .from('hospitals')
+      .select('id, name, verification_status')
+      .eq('id', hospitalId)
+      .single()
+    if (fetchError || !hospital) return fail('Hospital not found')
+
+    const { error } = await supabase
+      .from('hospitals')
+      .update({ verification_status: nextStatus })
+      .eq('id', hospitalId)
+    if (error) return fail(error.message)
+
+    await logAdminAction(supabase, userId, {
+      action: `hospital_${nextStatus}`,
+      entity_type: 'hospital',
+      entity_id: hospitalId,
+      reason: safeReason,
+      details: { hospital_name: hospital.name, previous_status: hospital.verification_status },
+    })
+
+    revalidateAdmin('/admin/hospitals', '/admin/verification', '/admin', '/hospitals')
+    revalidateTag('hospitals')
     return ok()
   })
 }

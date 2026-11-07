@@ -10,9 +10,16 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Avatar } from '@/components/ui/avatar'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { MapPin, Clock, Calendar, Stethoscope, Heart, Building2, Shield, CheckCircle, Star, Phone, Mail, ExternalLink, ArrowRight, Award, Languages, GraduationCap, Briefcase, Info, AlertCircle, Share2, Bookmark } from 'lucide-react'
+import { MapPin, Clock, Calendar, Stethoscope, Heart, Building2, Shield, CheckCircle, Star, Phone, Mail, ExternalLink, ArrowRight, Award, Languages, GraduationCap, Briefcase, Info, AlertCircle, Share2, Bookmark, GitCompare } from 'lucide-react'
 import { Doctor } from '@/lib/types'
 import { ScrollReveal } from '@/components/common/ScrollReveal'
+import {
+  formatExperienceYears,
+  formatDoctorName,
+  getDoctorDescription,
+  getSpecializationName,
+} from '@/lib/utils/doctor'
+import { useDoctorCompare } from '@/lib/hooks/useDoctorCompare'
 
 // Leaflet is heavy (~150 kB) — load it only when the map section is rendered,
 // keeping it out of the profile page's initial JavaScript bundle.
@@ -34,6 +41,12 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
   const router = useRouter()
   const [activeTab, setActiveTab] = React.useState('overview')
   const [selectedHospital, setSelectedHospital] = React.useState<string | null>(null)
+  const { isSelected: isCompared, toggle: toggleCompare } = useDoctorCompare()
+
+  const specializationName = getSpecializationName(doctor)
+  const description = getDoctorDescription(doctor)
+  const experienceLabel = formatExperienceYears(doctor.experience_years)
+  const compared = isCompared(doctor.id)
 
   const today = new Date().getDay()
   const currentTime = new Date().toTimeString().slice(0, 5)
@@ -92,7 +105,7 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
             <div className="flex-1 text-white">
               <div className="flex flex-wrap items-center gap-3 mb-2">
                 <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
-                  Dr. {doctor.full_name}
+                  {formatDoctorName(doctor.full_name)}
                 </h1>
                 {doctor.verification_status === 'verified' && (
                   <Badge className="gap-1.5 bg-white/20 backdrop-blur-sm text-white border-white/30">
@@ -105,11 +118,11 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
               <div className="flex flex-wrap items-center gap-4 mb-4 text-white/90">
                 <span className="flex items-center gap-1.5 font-medium">
                   <Stethoscope className="h-4 w-4" />
-                  {doctor.specialization?.name || 'Specialist'}
+                  {specializationName}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Award className="h-4 w-4" />
-                  {doctor.experience_years} years exp
+                  {experienceLabel}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <GraduationCap className="h-4 w-4" />
@@ -182,6 +195,23 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                 <Phone className="mr-2 h-4 w-4" />
                 Call
               </Button>
+              <Button
+                size="lg"
+                variant="ghost"
+                aria-pressed={compared}
+                onClick={() =>
+                  toggleCompare({
+                    id: doctor.id,
+                    full_name: doctor.full_name,
+                    photo_url: doctor.photo_url,
+                    specialization_name: specializationName,
+                  })
+                }
+                className="text-white hover:bg-white/10"
+              >
+                <GitCompare className="mr-2 h-4 w-4" />
+                {compared ? 'Added to compare' : 'Add to compare'}
+              </Button>
             </div>
           </div>
         </div>
@@ -228,7 +258,7 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-secondary-600 leading-relaxed whitespace-pre-wrap">{doctor.bio}</p>
+                    <p className="text-secondary-600 leading-relaxed whitespace-pre-wrap">{description}</p>
                   </CardContent>
                 </Card>
               )}
@@ -317,10 +347,12 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                         </span>
                       </li>
                     )}
-                    <li className="flex items-start gap-3 p-3 rounded-xl bg-white/60">
-                      <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                      <span className="text-secondary-700">{doctor.experience_years} years of relevant experience</span>
-                    </li>
+                    {doctor.experience_years > 0 && (
+                      <li className="flex items-start gap-3 p-3 rounded-xl bg-white/60">
+                        <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-secondary-700">Relevant specialist with {experienceLabel}</span>
+                      </li>
+                    )}
                     {getTodaysAvailability().length > 0 && (
                       <li className="flex items-start gap-3 p-3 rounded-xl bg-white/60">
                         <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />

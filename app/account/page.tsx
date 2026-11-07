@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Loader2,
   Home,
+  Stethoscope,
 } from 'lucide-react'
 
 type ProfileRow = {
@@ -338,6 +339,27 @@ export default function AccountPage() {
               </div>
             </div>
           </dl>
+
+          {role === 'doctor' && (
+            <div className="rounded-xl border border-primary-100 bg-primary-50/60 p-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-start gap-2">
+                  <Stethoscope className="mt-0.5 h-5 w-5 shrink-0 text-primary-600" aria-hidden="true" />
+                  <div>
+                    <p className="text-sm font-semibold text-secondary-900">Doctor profile</p>
+                    <p className="text-sm text-secondary-600">
+                      Edit your personal and professional details, and manage hospital affiliations.
+                    </p>
+                  </div>
+                </div>
+                <Link href="/dashboard/doctor" className="shrink-0">
+                  <Button variant="outline" className="w-full sm:w-auto">
+                    Open Doctor Dashboard
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          )}
 
           {logoutError && (
             <p role="alert" className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">

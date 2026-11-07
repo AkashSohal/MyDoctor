@@ -70,7 +70,7 @@ const getHomeData = unstable_cache(
     try {
       const supabase = createPublicClient()
 
-      const [specialtiesRes, doctorsRes, hospitalsRes, verifiedCountRes, hospitalCountRes, specialtyCountRes] =
+      const [specialtiesRes, doctorsRes, verifiedCountRes, hospitalCountRes, specialtyCountRes] =
         await Promise.all([
           supabase
             .from('specialties')
@@ -96,17 +96,30 @@ const getHomeData = unstable_cache(
             .order('verified_review_count', { ascending: false })
             .limit(4),
           supabase
-            .from('hospitals')
-            .select('id, name, address, phone, website, latitude, longitude, doctors:doctor_hospitals(count)')
-            .order('name')
-            .limit(6),
-          supabase
             .from('doctors')
             .select('id', { count: 'exact', head: true })
             .eq('verification_status', 'verified'),
           supabase.from('hospitals').select('id', { count: 'exact', head: true }),
           supabase.from('specialties').select('id', { count: 'exact', head: true }),
         ])
+
+      // Public facility list: verified only (falls back to the unfiltered
+      // query when the hospital verification migration is not applied yet).
+      const hospitalSelect =
+        'id, name, address, phone, website, latitude, longitude, verification_status, doctors:doctor_hospitals(count)'
+      let hospitalsRes: any = await supabase
+        .from('hospitals')
+        .select(hospitalSelect)
+        .eq('verification_status', 'verified')
+        .order('name')
+        .limit(6)
+      if (hospitalsRes.error) {
+        hospitalsRes = await supabase
+          .from('hospitals')
+          .select(hospitalSelect.replace(', verification_status', ''))
+          .order('name')
+          .limit(6)
+      }
 
       if (!specialtiesRes.error && specialtiesRes.data) {
         for (const row of specialtiesRes.data) {
@@ -143,6 +156,7 @@ const getHomeData = unstable_cache(
             website: row.website,
             latitude: row.latitude,
             longitude: row.longitude,
+            verification_status: row.verification_status,
             doctorCount: Array.isArray(row.doctors) ? row.doctors[0]?.count : 0,
           })
         }

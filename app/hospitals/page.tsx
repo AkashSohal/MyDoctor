@@ -3,8 +3,8 @@ import Link from 'next/link'
 import { unstable_cache } from 'next/cache'
 import { createPublicClient } from '@/utils/supabase/public'
 import { Card, CardContent } from '@/components/ui/card'
-import { Building2, MapPin, Phone, ExternalLink, ArrowRight, Users, Star } from 'lucide-react'
-import { formatDistance } from '@/lib/utils'
+import { Badge } from '@/components/ui/badge'
+import { Building2, MapPin, Phone, ArrowRight, Users, BadgeCheck } from 'lucide-react'
 
 export const metadata: Metadata = {
   title: 'Hospitals & Clinics | MyDoctor',
@@ -14,17 +14,46 @@ export const metadata: Metadata = {
 // Public listing data — cached and revalidated in the background.
 export const revalidate = 300
 
+const HOSPITAL_LIST_SELECT = `
+  id, name, address, phone, website, latitude, longitude, city, state, verification_status,
+  doctors:doctor_hospitals(count)
+`
+
+const HOSPITAL_LIST_SELECT_BASIC = `
+  id, name, address, phone, website, latitude, longitude,
+  doctors:doctor_hospitals(count)
+`
+
 const getHospitals = unstable_cache(
   async () => {
     const supabase = createPublicClient()
-    const { data } = await supabase
+    // Only verified facilities are listed publicly. Falls back to the
+    // unfiltered query if the verification migration is not applied yet.
+    let result: any = await supabase
       .from('hospitals')
-      .select(`
-        id, name, address, phone, website, latitude, longitude,
-        doctors:doctor_hospitals(count)
-      `)
+      .select(HOSPITAL_LIST_SELECT)
+      .eq('verification_status', 'verified')
       .order('name')
-    return data ?? []
+    if (result.error) {
+      result = await supabase
+        .from('hospitals')
+        .select(HOSPITAL_LIST_SELECT_BASIC)
+        .order('name')
+    }
+    if (result.error) return []
+    return (result.data ?? []) as Array<{
+      id: string
+      name: string
+      address: string
+      phone?: string | null
+      website?: string | null
+      latitude?: number | null
+      longitude?: number | null
+      city?: string | null
+      state?: string | null
+      verification_status?: string | null
+      doctors?: Array<{ count: number }>
+    }>
   },
   ['hospitals-list'],
   { revalidate: 300, tags: ['hospitals'] }
@@ -55,9 +84,17 @@ export default async function HospitalsPage() {
                       <Building2 className="h-7 w-7" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h3 className="font-semibold text-secondary-900 group-hover:text-primary-600 transition-colors truncate">
-                        {hospital.name}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold text-secondary-900 group-hover:text-primary-600 transition-colors truncate">
+                          {hospital.name}
+                        </h3>
+                        {hospital.verification_status === 'verified' && (
+                          <Badge variant="success" size="sm" className="gap-1 shrink-0">
+                            <BadgeCheck className="h-3 w-3" />
+                            Verified
+                          </Badge>
+                        )}
+                      </div>
                       <p className="text-sm text-secondary-500 mt-1 flex items-center gap-1">
                         <MapPin className="h-4 w-4" />
                         {hospital.address}

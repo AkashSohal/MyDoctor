@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/utils/supabase/server'
 import { cookies } from 'next/headers'
 import { DoctorDashboardClient } from './DoctorDashboardClient'
+import type { HospitalAffiliation } from '@/lib/hospitals'
 
 export const metadata: Metadata = {
   title: 'Doctor Dashboard | MyDoctor',
@@ -21,19 +22,22 @@ export default async function DoctorDashboardPage() {
     redirect('/auth/login?redirect=/dashboard/doctor')
   }
 
-  const { data: profile } = await supabase
+  const { data: roleProfile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
     .single()
 
-  if (profile?.role !== 'doctor') {
+  if (roleProfile?.role !== 'doctor') {
     redirect('/')
   }
 
   const { data: doctor } = await supabase
     .from('doctors')
-    .select('*')
+    .select(`
+      *,
+      specialization:specialties(id, name)
+    `)
     .eq('user_id', user.id)
     .single()
 
@@ -44,7 +48,10 @@ export default async function DoctorDashboardPage() {
   const [
     { data: appointments },
     { data: availability },
-    { data: hospitals }
+    { data: hospitals },
+    { data: affiliations },
+    { data: accountProfile },
+    { data: specialties }
   ] = await Promise.all([
     supabase
       .from('appointments')
@@ -69,7 +76,32 @@ export default async function DoctorDashboardPage() {
       .order('start_time', { ascending: true }),
     supabase
       .from('hospitals')
-      .select('*')
+      .select(
+        'id, name, address, latitude, longitude, phone, website, email, city, state, pin_code, hospital_type, verification_status, is_active, added_by, created_at'
+      )
+      .order('name'),
+    supabase
+      .from('doctor_hospitals')
+      .select(`
+        id,
+        doctor_id,
+        hospital_id,
+        created_at,
+        hospital:hospitals(
+          id, name, address, latitude, longitude, phone, website, email,
+          city, state, pin_code, hospital_type, verification_status, is_active, added_by, created_at
+        )
+      `)
+      .eq('doctor_id', doctor.id)
+      .order('created_at', { ascending: true }),
+    supabase
+      .from('profiles')
+      .select('full_name, phone, email, avatar_url')
+      .eq('id', user.id)
+      .maybeSingle(),
+    supabase
+      .from('specialties')
+      .select('id, name')
       .order('name'),
   ])
 
@@ -79,6 +111,16 @@ export default async function DoctorDashboardPage() {
       appointments={appointments || []}
       availability={availability || []}
       hospitals={hospitals || []}
+      affiliations={
+        (affiliations || []).filter(
+          (item) => Boolean(item.hospital)
+        ) as unknown as HospitalAffiliation[]
+      }
+      specialties={specialties || []}
+      profile={
+        accountProfile || { full_name: null, phone: null, email: user.email ?? null }
+      }
+      userId={user.id}
     />
   )
 }

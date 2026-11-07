@@ -57,6 +57,16 @@ export interface Hospital {
   longitude?: number
   phone?: string
   website?: string
+  email?: string
+  image_url?: string
+  facilities?: string[]
+  is_active?: boolean
+  city?: string
+  state?: string
+  pin_code?: string
+  hospital_type?: string
+  verification_status?: 'pending' | 'verified' | 'rejected'
+  added_by?: string | null
   created_at: string
   distance_km?: number
   doctor_count?: number

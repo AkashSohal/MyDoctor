@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { EmptyState } from '@/components/common/EmptyState'
 import { UrlPagination } from '@/components/admin/UrlPagination'
+import { HOSPITAL_STATUS_META } from '@/lib/hospitals'
 import { Building2, Globe, MapPin, Phone, Plus, Search } from 'lucide-react'
 
 export const dynamic = 'force-dynamic'
@@ -26,20 +27,37 @@ export default async function AdminHospitalsPage({
   const page = Math.max(1, Number(searchParams.page) || 1)
   const q = (searchParams.q ?? '').trim()
 
+  const baseSelect = `id, name, address, phone, website, email, image_url, facilities, is_active, created_at,
+       doctors:doctor_hospitals(count),
+       specialties:hospital_specialties(specialty:specialties(name))`
+  const enrichedSelect = `id, name, address, phone, website, email, image_url, facilities, is_active, created_at,
+       hospital_type, city, state, pin_code, verification_status,
+       doctors:doctor_hospitals(count),
+       specialties:hospital_specialties(specialty:specialties(name))`
+
   let query = supabase
     .from('hospitals')
-    .select(
-      `id, name, address, phone, website, email, image_url, facilities, is_active, created_at,
-       doctors:doctor_hospitals(count),
-       specialties:hospital_specialties(specialty:specialties(name))`,
-      { count: 'exact' }
-    )
+    .select(enrichedSelect, { count: 'exact' })
 
   if (q) query = query.or(`name.ilike.%${q}%,address.ilike.%${q}%`)
 
-  const { data, count, error } = await query
+  let { data, count, error } = await query
     .order('name')
     .range((page - 1) * PER_PAGE, page * PER_PAGE - 1)
+
+  // Fall back when the hospital verification migration is not applied yet
+  if (error) {
+    let retry: any = supabase
+      .from('hospitals')
+      .select(baseSelect, { count: 'exact' })
+    if (q) retry = retry.or(`name.ilike.%${q}%,address.ilike.%${q}%`)
+    const fallback = await retry
+      .order('name')
+      .range((page - 1) * PER_PAGE, page * PER_PAGE - 1)
+    data = fallback.data
+    count = fallback.count
+    error = fallback.error
+  }
 
   const hospitals = (data ?? []) as any[]
   const total = count ?? 0
@@ -96,6 +114,9 @@ export default async function AdminHospitalsPage({
             const specNames = (hospital.specialties ?? [])
               .map((s: any) => s?.specialty?.name)
               .filter(Boolean)
+            const statusMeta = hospital.verification_status
+              ? HOSPITAL_STATUS_META[hospital.verification_status as keyof typeof HOSPITAL_STATUS_META]
+              : undefined
             return (
               <Card key={hospital.id} className="transition-shadow hover:shadow-card-hover">
                 <CardContent className="p-5">
@@ -113,12 +134,18 @@ export default async function AdminHospitalsPage({
                       </span>
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
                         <h3 className="truncate font-bold text-secondary-900">{hospital.name}</h3>
+                        {statusMeta && (
+                          <Badge variant={statusMeta.variant ?? 'outline'} size="sm">
+                            {statusMeta.label}
+                          </Badge>
+                        )}
                         {!hospital.is_active && <Badge variant="danger">Inactive</Badge>}
                       </div>
                       <p className="mt-0.5 flex items-start gap-1 text-xs text-secondary-500">
                         <MapPin className="mt-0.5 h-3 w-3 shrink-0" /> {hospital.address}
+                        {hospital.city ? `, ${hospital.city}` : ''}
                       </p>
                     </div>
                   </div>

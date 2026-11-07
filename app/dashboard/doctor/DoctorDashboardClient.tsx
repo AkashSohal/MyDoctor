@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/utils/supabase/client'
 import { formatDate, formatTime } from '@/lib/utils'
+import {
+  formatDoctorName,
+  formatExperienceYears,
+  getSpecializationName,
+} from '@/lib/utils/doctor'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -13,20 +18,26 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { RatingStars } from '@/components/common/RatingStars'
+import { HospitalAffiliationsSection } from './HospitalAffiliationsSection'
+import { DoctorProfileEditor } from './DoctorProfileEditor'
 import {
   Calendar, Clock, Stethoscope, Star, Building2,
-  CheckCircle, AlertCircle, Clock as ClockIcon,
-  Settings, Plus, Edit, Trash2
+  CheckCircle, Clock as ClockIcon,
+  Plus, Edit, Trash2
 } from 'lucide-react'
 import { Doctor, Appointment, Availability, Hospital } from '@/lib/types'
+import type { HospitalAffiliation } from '@/lib/hospitals'
 
 interface DoctorDashboardClientProps {
   doctor: Doctor
   appointments: (Appointment & { patient?: { full_name: string; phone: string; email: string; avatar_url?: string }; hospital?: { name: string; address: string } })[]
   availability: (Availability & { hospital?: Hospital })[]
   hospitals: Hospital[]
+  affiliations: HospitalAffiliation[]
+  specialties: { id: string; name: string }[]
+  profile: { full_name?: string | null; phone?: string | null; email?: string | null }
+  userId: string
 }
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -35,12 +46,16 @@ export function DoctorDashboardClient({
   doctor,
   appointments,
   availability,
-  hospitals
+  hospitals,
+  affiliations,
+  specialties,
+  profile,
+  userId
 }: DoctorDashboardClientProps) {
   const router = useRouter()
-  const supabase = createClient()
+  const supabase = React.useMemo(() => createClient(), [])
   const [activeTab, setActiveTab] = React.useState('overview')
-  const [profileEditing, setProfileEditing] = React.useState(false)
+  const [profileEditRequest, setProfileEditRequest] = React.useState(0)
   const [showAvailabilityModal, setShowAvailabilityModal] = React.useState(false)
   const [editingAvailability, setEditingAvailability] = React.useState<Availability | null>(null)
   const [updatingId, setUpdatingId] = React.useState<string | null>(null)
@@ -51,19 +66,15 @@ export function DoctorDashboardClient({
   const [availEndTime, setAvailEndTime] = React.useState('13:00')
   const [availHospitalId, setAvailHospitalId] = React.useState('')
 
-  // Profile editing state
-  const [profileData, setProfileData] = React.useState({
-    qualifications: doctor.qualifications?.join(', ') || '',
-    experience_years: doctor.experience_years || 0,
-    consultation_fee: doctor.consultation_fee || 0,
-    gender: (doctor.gender || 'male') as 'male' | 'female' | 'other',
-    languages: doctor.languages?.join(', ') || '',
-    bio: doctor.bio || '',
-  })
-
   // Local state for appointments and availability
   const [localAppointments, setLocalAppointments] = React.useState(appointments)
   const [localAvailability, setLocalAvailability] = React.useState(availability)
+
+  // Availability can only be scheduled at facilities the doctor is affiliated with.
+  const affiliatedHospitals = React.useMemo(
+    () => affiliations.map((affiliation) => affiliation.hospital),
+    [affiliations]
+  )
 
   React.useEffect(() => {
     setLocalAppointments(appointments)
@@ -80,9 +91,9 @@ export function DoctorDashboardClient({
       setAvailDay('1')
       setAvailStartTime('09:00')
       setAvailEndTime('13:00')
-      setAvailHospitalId(hospitals[0]?.id || '')
+      setAvailHospitalId(affiliatedHospitals[0]?.id || '')
     }
-  }, [editingAvailability, hospitals])
+  }, [editingAvailability, affiliatedHospitals])
 
   const handleAppointmentAction = async (appointmentId: string, status: Appointment['status']) => {
     setUpdatingId(appointmentId)
@@ -97,6 +108,11 @@ export function DoctorDashboardClient({
   }
 
   const handleSaveAvailability = async () => {
+    if (!availHospitalId) {
+      setUpdatingId(null)
+      setShowAvailabilityModal(false)
+      return
+    }
     setUpdatingId('availability')
     if (editingAvailability) {
       const { error } = await supabase
@@ -147,26 +163,6 @@ export function DoctorDashboardClient({
     setUpdatingId(null)
   }
 
-  const handleSaveProfile = async () => {
-    setUpdatingId('profile')
-    const { error } = await supabase
-      .from('doctors')
-      .update({
-        qualifications: profileData.qualifications.split(',').map(s => s.trim()).filter(Boolean),
-        experience_years: profileData.experience_years,
-        consultation_fee: profileData.consultation_fee,
-        gender: profileData.gender,
-        languages: profileData.languages.split(',').map(s => s.trim()).filter(Boolean),
-        bio: profileData.bio,
-      })
-      .eq('id', doctor.id)
-    if (!error) {
-      setProfileEditing(false)
-      router.refresh()
-    }
-    setUpdatingId(null)
-  }
-
   const getStatusBadge = (status: string) => {
     const badges: Record<string, React.ReactNode> = {
       pending: <Badge variant="warning">Pending</Badge>,
@@ -201,8 +197,8 @@ export function DoctorDashboardClient({
           <div className="flex flex-col sm:flex-row sm:items-center gap-6">
             <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" className="ring-4 ring-white/20 shadow-xl" />
             <div className="flex-1">
-              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Dr. {doctor.full_name}</h1>
-              <p className="text-primary-100 mb-3">{doctor.specialization?.name || 'Specialist'} • {doctor.experience_years} years exp</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">{formatDoctorName(doctor.full_name)}</h1>
+              <p className="text-primary-100 mb-3">{getSpecializationName(doctor)} • {formatExperienceYears(doctor.experience_years)}</p>
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-white/20 backdrop-blur-sm text-white text-sm font-medium">
                   {doctor.consultation_fee ? `₹${doctor.consultation_fee}` : 'Fee not set'}
@@ -284,14 +280,20 @@ export function DoctorDashboardClient({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4 h-14 bg-white rounded-xl shadow-sm">
-            {['overview', 'appointments', 'availability', 'profile'].map((tab) => (
-              <TabsTrigger 
-                key={tab} 
-                value={tab}
-                className="capitalize rounded-lg font-medium data-[state=active]:bg-primary-100 data-[state=active]:text-primary-700"
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 h-auto gap-1 bg-white rounded-xl shadow-sm p-1.5">
+            {[
+              { value: 'overview', label: 'Overview' },
+              { value: 'appointments', label: 'Appointments' },
+              { value: 'hospitals', label: 'Hospitals' },
+              { value: 'availability', label: 'Availability' },
+              { value: 'profile', label: 'Profile' },
+            ].map((tab) => (
+              <TabsTrigger
+                key={tab.value}
+                value={tab.value}
+                className="rounded-lg px-3 py-2.5 font-medium data-[state=active]:bg-primary-100 data-[state=active]:text-primary-700"
               >
-                {tab}
+                {tab.label}
               </TabsTrigger>
             ))}
           </TabsList>
@@ -307,9 +309,17 @@ export function DoctorDashboardClient({
                     <Plus className="h-4 w-4" />
                     Add Availability Slot
                   </Button>
-                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => { setActiveTab('profile'); setProfileEditing(true) }}>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => { setActiveTab('profile'); setProfileEditRequest((value) => value + 1) }}
+                  >
                     <Edit className="h-4 w-4" />
                     Edit Profile
+                  </Button>
+                  <Button variant="outline" className="w-full justify-start gap-2" onClick={() => setActiveTab('hospitals')}>
+                    <Building2 className="h-4 w-4" />
+                    Manage Hospital Affiliations
                   </Button>
                 </CardContent>
               </Card>
@@ -411,14 +421,38 @@ export function DoctorDashboardClient({
             </div>
           </TabsContent>
 
+          <TabsContent value="hospitals" className="mt-6">
+            <HospitalAffiliationsSection
+              doctorId={doctor.id}
+              userId={userId}
+              affiliations={affiliations}
+              allHospitals={hospitals}
+            />
+          </TabsContent>
+
           <TabsContent value="availability" className="mt-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
               <h2 className="text-xl font-semibold text-secondary-900">Weekly Schedule</h2>
-              <Button onClick={() => { setEditingAvailability(null); setShowAvailabilityModal(true) }}>
+              <Button
+                onClick={() => { setEditingAvailability(null); setShowAvailabilityModal(true) }}
+                disabled={affiliatedHospitals.length === 0}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Schedule
               </Button>
             </div>
+            {affiliatedHospitals.length === 0 && (
+              <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700">
+                Add a hospital or clinic affiliation first — availability is scheduled per facility.
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('hospitals')}
+                  className="ml-2 font-semibold underline"
+                >
+                  Manage affiliations
+                </button>
+              </div>
+            )}
             <div className="space-y-4">
               {DAYS.map((day, dayIndex) => {
                 const daySlots = localAvailability.filter(a => a.day_of_week === dayIndex)
@@ -455,7 +489,10 @@ export function DoctorDashboardClient({
                     <ClockIcon className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
                     <h3 className="text-lg font-medium text-secondary-900 mb-1">No schedules set</h3>
                     <p className="text-secondary-500 mb-4">Add your weekly availability for patients to book</p>
-                    <Button onClick={() => { setEditingAvailability(null); setShowAvailabilityModal(true) }}>
+                    <Button
+                      onClick={() => { setEditingAvailability(null); setShowAvailabilityModal(true) }}
+                      disabled={affiliatedHospitals.length === 0}
+                    >
                       <Plus className="h-4 w-4 mr-2" />
                       Add First Schedule
                     </Button>
@@ -466,93 +503,14 @@ export function DoctorDashboardClient({
           </TabsContent>
 
           <TabsContent value="profile" className="mt-6">
-            <div className="max-w-2xl">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Professional Profile</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="flex items-center gap-4">
-                    <Avatar src={doctor.photo_url} fallback={doctor.full_name} size="xl" />
-                    <div>
-                      <h3 className="text-lg font-semibold">Dr. {doctor.full_name}</h3>
-                      <p className="text-secondary-500">{doctor.specialization?.name}</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div>
-                      <Label>Qualifications</Label>
-                      <Textarea
-                        value={profileData.qualifications}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, qualifications: e.target.value }))}
-                        disabled={!profileEditing}
-                        rows={3}
-                      />
-                    </div>
-                    <div>
-                      <Label>Experience (Years)</Label>
-                      <Input
-                        type="number"
-                        value={profileData.experience_years}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, experience_years: parseInt(e.target.value) || 0 }))}
-                        disabled={!profileEditing}
-                      />
-                    </div>
-                    <div>
-                      <Label>Consultation Fee (₹)</Label>
-                      <Input
-                        type="number"
-                        value={profileData.consultation_fee}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, consultation_fee: parseInt(e.target.value) || 0 }))}
-                        disabled={!profileEditing}
-                      />
-                    </div>
-                    <div>
-                      <Label>Gender</Label>
-                      <Select
-                        value={profileData.gender}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, gender: e.target.value as 'male' | 'female' | 'other' }))}
-                        disabled={!profileEditing}
-                      >
-                        <option value="male">Male</option>
-                        <option value="female">Female</option>
-                        <option value="other">Other</option>
-                      </Select>
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label>Languages</Label>
-                      <Input
-                        value={profileData.languages}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, languages: e.target.value }))}
-                        disabled={!profileEditing}
-                        placeholder="English, Hindi"
-                      />
-                    </div>
-                    <div className="sm:col-span-2">
-                      <Label>About / Bio</Label>
-                      <Textarea
-                        value={profileData.bio}
-                        onChange={(e) => setProfileData(prev => ({ ...prev, bio: e.target.value }))}
-                        disabled={!profileEditing}
-                        rows={4}
-                      />
-                    </div>
-                  </div>
-                  {profileEditing && (
-                    <div className="flex gap-2">
-                      <Button variant="outline" className="flex-1" onClick={() => setProfileEditing(false)}>Cancel</Button>
-                      <Button className="flex-1" onClick={handleSaveProfile} loading={updatingId === 'profile'}>Save Profile</Button>
-                    </div>
-                  )}
-                  {!profileEditing && (
-                    <Button onClick={() => setProfileEditing(true)} className="w-full">
-                      <Edit className="h-4 w-4 mr-2" />
-                      Edit Profile
-                    </Button>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
+            <DoctorProfileEditor
+              doctor={doctor}
+              profile={profile}
+              specialties={specialties}
+              userId={userId}
+              editRequest={profileEditRequest}
+              onManageAvailability={() => setActiveTab('availability')}
+            />
           </TabsContent>
         </Tabs>
       </div>
@@ -584,15 +542,27 @@ export function DoctorDashboardClient({
               </div>
               <div>
                 <Label>Hospital</Label>
-                <Select value={availHospitalId} onChange={(e) => setAvailHospitalId(e.target.value)}>
-                  {hospitals.map((h) => (
+                <Select
+                  value={availHospitalId}
+                  onChange={(e) => setAvailHospitalId(e.target.value)}
+                  disabled={affiliatedHospitals.length === 0}
+                >
+                  {affiliatedHospitals.length === 0 && (
+                    <option value="">Add a hospital affiliation first</option>
+                  )}
+                  {affiliatedHospitals.map((h) => (
                     <option key={h.id} value={h.id}>{h.name}</option>
                   ))}
                 </Select>
               </div>
               <div className="flex gap-2">
                 <Button variant="outline" className="flex-1" onClick={() => setShowAvailabilityModal(false)}>Cancel</Button>
-                <Button className="flex-1" onClick={handleSaveAvailability} loading={updatingId === 'availability'}>
+                <Button
+                  className="flex-1"
+                  onClick={handleSaveAvailability}
+                  loading={updatingId === 'availability'}
+                  disabled={affiliatedHospitals.length === 0 || !availHospitalId}
+                >
                   {editingAvailability ? 'Save Changes' : 'Add Schedule'}
                 </Button>
               </div>

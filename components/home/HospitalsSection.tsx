@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Hospital, MapPin, Phone, Globe, Users, Navigation, ArrowRight } from 'lucide-react'
+import { Hospital, MapPin, Phone, Globe, Users, Navigation, ArrowRight, BadgeCheck } from 'lucide-react'
 
 export interface HospitalCardData {
   id: string
@@ -9,6 +9,7 @@ export interface HospitalCardData {
   website?: string | null
   latitude?: number | null
   longitude?: number | null
+  verification_status?: string | null
   doctorCount?: number | null
 }
 
@@ -84,9 +85,20 @@ export function HospitalsSection({ hospitals }: HospitalsSectionProps) {
                       <Hospital className="h-6 w-6" aria-hidden="true" />
                     </span>
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-semibold text-secondary-900">
-                        {hospital.name}
-                      </h3>
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <h3 className="truncate text-base font-semibold text-secondary-900">
+                          {hospital.name}
+                        </h3>
+                        {hospital.verification_status === 'verified' && (
+                          <span
+                            className="inline-flex shrink-0 items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-[11px] font-medium text-green-700"
+                            title="Verified by MyDoctor"
+                          >
+                            <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+                            Verified
+                          </span>
+                        )}
+                      </div>
                       <p className="mt-1 flex items-start gap-1.5 text-sm text-secondary-500">
                         <MapPin className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
                         {hospital.address}

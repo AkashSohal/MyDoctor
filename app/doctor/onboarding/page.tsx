@@ -13,9 +13,11 @@ import { Select } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
   ArrowLeft, ArrowRight, CheckCircle, Stethoscope, Building2, 
-  Clock, User, GraduationCap, Briefcase, MapPin, Plus, Trash2, Loader2
+  Clock, User, GraduationCap, Briefcase, MapPin, Plus, Trash2, Loader2, BadgeCheck
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { AddHospitalModal } from '@/components/hospitals/AddHospitalModal'
+import { HOSPITAL_STATUS_META, type HospitalListItem } from '@/lib/hospitals'
 
 const supabase = createClient()
 
@@ -32,6 +34,11 @@ interface Hospital {
   address: string
   latitude: number
   longitude: number
+  city?: string | null
+  state?: string | null
+  pin_code?: string | null
+  hospital_type?: string | null
+  verification_status?: 'pending' | 'verified' | 'rejected' | null
 }
 
 export default function DoctorOnboardingPage() {
@@ -42,6 +49,7 @@ export default function DoctorOnboardingPage() {
   const [specialties, setSpecialties] = React.useState<Specialty[]>([])
   const [hospitals, setHospitals] = React.useState<Hospital[]>([])
   const [error, setError] = React.useState('')
+  const [addHospitalOpen, setAddHospitalOpen] = React.useState(false)
 
   const [formData, setFormData] = React.useState({
     // Step 1: Professional Details
@@ -83,10 +91,25 @@ export default function DoctorOnboardingPage() {
   const loadData = React.useCallback(async () => {
     const [specialtiesRes, hospitalsRes] = await Promise.all([
       supabase.from('specialties').select('id, name').order('name'),
-      supabase.from('hospitals').select('id, name, address, latitude, longitude').order('name'),
+      supabase
+        .from('hospitals')
+        .select(
+          'id, name, address, latitude, longitude, city, state, pin_code, hospital_type, verification_status'
+        )
+        .order('name'),
     ])
+    // If the hospital verification migration is not applied yet, fall back to
+    // the basic columns so registration is never blocked.
+    let hospitalsData: any = hospitalsRes.data
+    if (hospitalsRes.error) {
+      const fallback = await supabase
+        .from('hospitals')
+        .select('id, name, address, latitude, longitude')
+        .order('name')
+      hospitalsData = fallback.data
+    }
     if (specialtiesRes.data) setSpecialties(specialtiesRes.data)
-    if (hospitalsRes.data) setHospitals(hospitalsRes.data)
+    if (hospitalsData) setHospitals(hospitalsData as Hospital[])
   }, [])
 
   React.useEffect(() => {
@@ -134,6 +157,19 @@ export default function DoctorOnboardingPage() {
       selectedHospitals: prev.selectedHospitals.includes(hospitalId)
         ? prev.selectedHospitals.filter(id => id !== hospitalId)
         : [...prev.selectedHospitals, hospitalId],
+    }))
+  }
+
+  // New hospital from the modal: show it immediately and pre-select it.
+  const handleHospitalCreated = (hospital: HospitalListItem) => {
+    setHospitals(prev =>
+      prev.some(h => h.id === hospital.id) ? prev : [hospital as Hospital, ...prev]
+    )
+    setFormData(prev => ({
+      ...prev,
+      selectedHospitals: prev.selectedHospitals.includes(hospital.id)
+        ? prev.selectedHospitals
+        : [...prev.selectedHospitals, hospital.id],
     }))
   }
 
@@ -544,48 +580,94 @@ export default function DoctorOnboardingPage() {
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => userId && setAddHospitalOpen(true)}
+                  disabled={!userId}
+                  className="w-full border-2 border-dashed border-primary-300 bg-primary-50/60 py-6 text-primary-700 hover:border-primary-400 hover:bg-primary-50"
+                >
+                  <Plus className="mr-2 h-5 w-5" />
+                  Add Hospital / Clinic
+                </Button>
                 <p className="text-sm text-secondary-500">
-                  You can add more hospitals later from your dashboard.
+                  Select every facility where you practice. You can add or remove them freely —
+                  and manage them later from your dashboard.
                 </p>
+                {formData.selectedHospitals.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {hospitals
+                      .filter(h => formData.selectedHospitals.includes(h.id))
+                      .map(h => (
+                        <Badge key={h.id} className="gap-1.5 py-1 pl-3 pr-1.5">
+                          {h.name}
+                          <button
+                            type="button"
+                            aria-label={`Remove ${h.name}`}
+                            onClick={() => toggleHospital(h.id)}
+                            className="rounded-full p-0.5 text-primary-700 hover:bg-primary-200"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      ))}
+                  </div>
+                )}
                 <div className="space-y-3">
-                  {hospitals.map(hospital => (
-                    <button
-                      key={hospital.id}
-                      onClick={() => toggleHospital(hospital.id)}
-                      className={cn(
-                        'w-full p-4 rounded-lg border-2 text-left transition-colors',
-                        formData.selectedHospitals.includes(hospital.id)
-                          ? 'border-primary-500 bg-primary-50'
-                          : 'border-secondary-200 hover:border-primary-300'
-                      )}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          'w-10 h-10 rounded-lg flex items-center justify-center',
+                  {hospitals.map(hospital => {
+                    const status = hospital.verification_status
+                      ? HOSPITAL_STATUS_META[hospital.verification_status]
+                      : null
+                    return (
+                      <button
+                        key={hospital.id}
+                        onClick={() => toggleHospital(hospital.id)}
+                        className={cn(
+                          'w-full p-4 rounded-lg border-2 text-left transition-colors',
                           formData.selectedHospitals.includes(hospital.id)
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-secondary-100 text-secondary-600'
-                        )}>
-                          <Building2 className="h-5 w-5" />
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-medium text-secondary-900">{hospital.name}</h4>
-                          <p className="text-sm text-secondary-500 flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {hospital.address}
-                          </p>
-                        </div>
-                        {formData.selectedHospitals.includes(hospital.id) && (
-                          <CheckCircle className="h-5 w-5 text-primary-600" />
+                            ? 'border-primary-500 bg-primary-50'
+                            : 'border-secondary-200 hover:border-primary-300'
                         )}
-                      </div>
-                    </button>
-                  ))}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            'w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0',
+                            formData.selectedHospitals.includes(hospital.id)
+                              ? 'bg-primary-600 text-white'
+                              : 'bg-secondary-100 text-secondary-600'
+                          )}>
+                            <Building2 className="h-5 w-5" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <h4 className="font-medium text-secondary-900">{hospital.name}</h4>
+                              {status && (
+                                <Badge variant={status.variant} size="sm" className="gap-1">
+                                  {hospital.verification_status === 'verified' && (
+                                    <BadgeCheck className="h-3 w-3" />
+                                  )}
+                                  {status.label}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-sm text-secondary-500 flex items-center gap-1">
+                              <MapPin className="h-3 w-3 shrink-0" />
+                              {hospital.address}
+                              {hospital.city ? `, ${hospital.city}` : ''}
+                            </p>
+                          </div>
+                          {formData.selectedHospitals.includes(hospital.id) && (
+                            <CheckCircle className="h-5 w-5 text-primary-600 flex-shrink-0" />
+                          )}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
                 {hospitals.length === 0 && (
                   <div className="text-center py-8">
                     <Building2 className="mx-auto h-12 w-12 text-secondary-300 mb-3" />
-                    <p className="text-secondary-500">No hospitals available. You can add them later.</p>
+                    <p className="text-secondary-500">No hospitals listed yet — use the button above to add one.</p>
                   </div>
                 )}
               </CardContent>
@@ -710,6 +792,14 @@ export default function DoctorOnboardingPage() {
           </p>
         </div>
       </div>
+
+      <AddHospitalModal
+        open={addHospitalOpen}
+        onClose={() => setAddHospitalOpen(false)}
+        userId={userId ?? ''}
+        existingHospitals={hospitals}
+        onCreated={handleHospitalCreated}
+      />
     </div>
   )
 }

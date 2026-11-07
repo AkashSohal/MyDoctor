@@ -2,6 +2,7 @@ import * as React from 'react'
 import { Avatar } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { CheckCircle, CalendarClock, ShieldCheck, BadgeIndianRupee, GraduationCap } from 'lucide-react'
+import { formatExperienceYears, formatDoctorName } from '@/lib/utils/doctor'
 
 export interface FeaturedDoctor {
   id: string
@@ -95,7 +96,7 @@ export function DoctorVisual({ doctor }: { doctor?: FeaturedDoctor | null }) {
             <div className="flex items-center gap-3">
               <Avatar src={doctor.photoUrl} fallback={doctor.fullName} size="lg" alt={doctor.fullName} />
               <div className="min-w-0">
-                <p className="truncate text-sm font-semibold text-secondary-900">Dr. {doctor.fullName}</p>
+                <p className="truncate text-sm font-semibold text-secondary-900">{formatDoctorName(doctor.fullName)}</p>
                 <p className="truncate text-xs text-secondary-500">
                   {doctor.specialization || 'Specialist'}
                 </p>
@@ -108,9 +109,9 @@ export function DoctorVisual({ doctor }: { doctor?: FeaturedDoctor | null }) {
               </div>
             </div>
             <div className="mt-3 flex flex-wrap gap-1.5 text-[11px] text-secondary-600">
-              {doctor.experienceYears != null && (
+              {doctor.experienceYears != null && doctor.experienceYears > 0 && (
                 <span className="rounded-lg bg-secondary-100 px-2 py-1">
-                  {doctor.experienceYears} yrs exp
+                  {formatExperienceYears(doctor.experienceYears)}
                 </span>
               )}
               {doctor.consultationFee != null && (
