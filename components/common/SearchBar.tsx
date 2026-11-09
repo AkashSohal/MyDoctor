@@ -43,7 +43,7 @@ export function SearchBar({
 
   return (
     <div className={cn('relative w-full max-w-3xl', className)}>
-      <div className="relative">
+      <div className="relative flex flex-col gap-2 sm:block">
         <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none text-secondary-400">
           <Search className="h-5 w-5" />
         </div>
@@ -59,7 +59,7 @@ export function SearchBar({
           onKeyDown={(e) => e.key === 'Enter' && onSearch()}
           placeholder={placeholder}
           className={cn(
-            'flex h-12 w-full rounded-xl border border-secondary-300 bg-white pl-12 pr-12 py-3 text-lg text-secondary-900 placeholder:text-secondary-400 transition-colors',
+            'flex h-12 w-full rounded-xl border border-secondary-300 bg-white pl-12 pr-4 sm:pr-36 py-3 text-lg text-secondary-900 placeholder:text-secondary-400 transition-colors',
             'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent',
             'hover:border-secondary-400'
           )}
@@ -68,7 +68,7 @@ export function SearchBar({
           type="button"
           onClick={onSearch}
           disabled={loading || !value.trim()}
-          className="absolute right-1 top-1/2 -translate-y-1/2 h-10 px-4"
+          className="h-11 w-full px-4 sm:absolute sm:right-1 sm:top-1/2 sm:-translate-y-1/2 sm:h-10 sm:w-auto"
         >
           {loading ? (
             <Loader2 className="h-5 w-5 animate-spin" />

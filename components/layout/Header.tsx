@@ -6,15 +6,15 @@ import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { 
-  DropdownMenu, 
-  DropdownMenuTrigger, 
-  DropdownMenuContent, 
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator 
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown'
 import { Avatar } from '@/components/ui/avatar'
-import { Menu, X, User, LogOut, Settings, Stethoscope, Building2, Heart, HelpCircle, LayoutDashboard, Shield, Home, Calendar, Siren } from 'lucide-react'
+import { Menu, X, User, LogOut, Stethoscope, Building2, Heart, HelpCircle, LayoutDashboard, Shield, Home, Calendar, Siren } from 'lucide-react'
 import { useAuth } from '@/lib/hooks/useAuth'
 
 const navigation = [
@@ -56,58 +56,82 @@ export function Header() {
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
+  // Close the mobile drawer when the route changes, when the viewport
+  // grows to the desktop layout, or when Escape is pressed.
+  React.useEffect(() => {
+    setMobileMenuOpen(false)
+  }, [pathname])
+
+  React.useEffect(() => {
+    if (!mobileMenuOpen) return
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMobileMenuOpen(false)
+    }
+    const mq = window.matchMedia('(min-width: 1024px)')
+    const onResize = () => {
+      if (mq.matches) setMobileMenuOpen(false)
+    }
+    window.addEventListener('keydown', onKeyDown)
+    mq.addEventListener('change', onResize)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      mq.removeEventListener('change', onResize)
+    }
+  }, [mobileMenuOpen])
+
+  const navLinkClasses = (item: (typeof navigation)[number]) =>
+    cn(
+      'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition-all duration-200',
+      pathname === item.href
+        ? item.emergency
+          ? 'bg-red-50 text-red-700 shadow-sm'
+          : 'bg-primary-100/80 text-primary-700 shadow-sm'
+        : item.emergency
+          ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
+          : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
+    )
+
+  const mobileLinkClasses = (item: (typeof navigation)[number]) =>
+    cn(
+      'flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all duration-200',
+      pathname === item.href
+        ? item.emergency
+          ? 'bg-red-50 text-red-700'
+          : 'bg-primary-100/80 text-primary-700'
+        : item.emergency
+          ? 'text-red-600 hover:bg-red-50'
+          : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
+    )
+
   return (
     <header className={cn(
       'sticky top-0 z-50 w-full transition-all duration-300',
-      scrolled 
-        ? 'bg-white/90 backdrop-blur-xl border-b border-secondary-200/50 shadow-soft' 
+      scrolled
+        ? 'bg-white/90 backdrop-blur-xl border-b border-secondary-200/50 shadow-soft'
         : 'bg-white/80 backdrop-blur-sm border-b border-secondary-200/30'
     )}>
       <nav className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8" aria-label="Main navigation">
-        <div className="flex h-16 items-center justify-between">
-          <div className="flex items-center shrink-0">
-            <Link href="/" className="flex items-center space-x-2.5 group" aria-label="MyDoctor Home">
-              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 shadow-md group-hover:shadow-glow transition-all duration-300 group-hover:scale-105">
-                <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-              </div>
-              <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-teal-600 bg-clip-text text-transparent">
-                MyDoctor
-              </span>
-            </Link>
-          </div>
+        {/* Top bar: logo · actions (desktop) · hamburger (mobile) */}
+        <div className="flex h-16 items-center justify-between gap-3">
+          <Link href="/" className="flex shrink-0 items-center space-x-2.5 group" aria-label="MyDoctor Home">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 shadow-md group-hover:shadow-glow transition-all duration-300 group-hover:scale-105">
+              <svg className="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            </div>
+            <span className="text-xl font-bold bg-gradient-to-r from-primary-600 to-teal-600 bg-clip-text text-transparent">
+              MyDoctor
+            </span>
+          </Link>
 
-          <div className="hidden lg:flex lg:min-w-0 lg:items-center lg:space-x-1 lg:overflow-x-auto lg:scrollbar-hide">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-4 py-2 text-sm font-medium transition-all duration-200',
-                  pathname === item.href
-                    ? item.emergency
-                      ? 'bg-red-50 text-red-700 shadow-sm'
-                      : 'bg-primary-100/80 text-primary-700 shadow-sm'
-                    : item.emergency
-                      ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-                      : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
-                )}
-              >
-                <item.icon className="h-4 w-4" aria-hidden="true" />
-                {item.name}
-              </Link>
-            ))}
-          </div>
-
-          <div className="hidden lg:flex lg:shrink-0 lg:items-center lg:space-x-3">
+          <div className="hidden lg:flex lg:shrink-0 lg:items-center lg:gap-3">
             {loading ? (
               <div className="flex items-center gap-3">
                 <div className="h-10 w-20 animate-pulse rounded-xl bg-secondary-200" />
                 <div className="h-10 w-24 animate-pulse rounded-xl bg-secondary-200" />
               </div>
             ) : user ? (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2.5">
                 <Link href="/account">
                   <Button
                     variant="outline"
@@ -133,11 +157,12 @@ export function Header() {
                       variant="ghost"
                       className="relative h-10 w-10 rounded-xl hover:bg-secondary-100 transition-all duration-200"
                       onClick={() => setSignOutError('')}
+                      aria-label="Open account menu"
                     >
-                      <Avatar 
-                        src={user.avatar_url} 
-                        fallback={user.full_name || user.email} 
-                        size="sm" 
+                      <Avatar
+                        src={user.avatar_url}
+                        fallback={user.full_name || user.email}
+                        size="sm"
                         alt={user.full_name || 'User'}
                       />
                       <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-green-500 border-2 border-white" />
@@ -179,7 +204,7 @@ export function Header() {
                         {signOutError}
                       </p>
                     )}
-                    <DropdownMenuItem 
+                    <DropdownMenuItem
                       onSelect={(event) => {
                         event.preventDefault()
                         void handleSignOut()
@@ -193,7 +218,7 @@ export function Header() {
                 </DropdownMenu>
               </div>
             ) : (
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center gap-2">
                 <Link href="/auth/login">
                   <Button variant="ghost" size="sm" className="font-medium">
                     Sign In
@@ -235,29 +260,35 @@ export function Header() {
             </Button>
           </div>
         </div>
+
+        {/* Desktop navigation row — its own row so links never collide with actions */}
+        <div className="hidden lg:flex lg:h-12 lg:items-center lg:justify-center lg:gap-1 lg:border-t lg:border-secondary-100">
+          {navigation.map((item) => (
+            <Link key={item.name} href={item.href} className={navLinkClasses(item)}>
+              <item.icon className="h-4 w-4" aria-hidden="true" />
+              {item.name}
+            </Link>
+          ))}
+        </div>
       </nav>
 
       {/* Mobile menu */}
-      <div className={cn(
-        'lg:hidden overflow-hidden transition-all duration-300',
-        mobileMenuOpen ? 'max-h-[700px] opacity-100' : 'max-h-0 opacity-0'
-      )}>
+      <div
+        id="mobile-menu"
+        className={cn(
+          'lg:hidden transition-all duration-300',
+          mobileMenuOpen
+            ? 'visible max-h-[calc(100vh-4rem)] overflow-y-auto opacity-100'
+            : 'invisible max-h-0 overflow-hidden opacity-0'
+        )}
+      >
         <div className="border-t border-secondary-200/50 bg-white/95 backdrop-blur-xl py-4">
           <div className="space-y-1 px-4">
             {navigation.map((item) => (
               <Link
                 key={item.name}
                 href={item.href}
-                className={cn(
-                  'flex items-center gap-3 rounded-xl px-4 py-3 text-base font-medium transition-all duration-200',
-                  pathname === item.href
-                    ? item.emergency
-                      ? 'bg-red-50 text-red-700'
-                      : 'bg-primary-100/80 text-primary-700'
-                    : item.emergency
-                      ? 'text-red-600 hover:bg-red-50'
-                      : 'text-secondary-600 hover:bg-secondary-100 hover:text-secondary-900'
-                )}
+                className={mobileLinkClasses(item)}
                 onClick={() => setMobileMenuOpen(false)}
               >
                 <item.icon className="h-5 w-5" aria-hidden="true" />

@@ -35,6 +35,12 @@
     @apply bg-secondary-50 text-secondary-900 antialiased;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  /* Grid items shrink to their track instead of forcing the track to grow
+     to their min-content width — long names/addresses wrap instead of
+     pushing the page into horizontal scrolling. */
+  .grid > * {
+    min-width: 0;
+  }
 }
 
 @layer components {
@@ -142,7 +148,7 @@
   }
 
   .animate-in {
-    animation: fade-in-up 0.6s ease-out forwards;
+    animation: slide-up 0.6s ease-out forwards;
     opacity: 0;
   }
 

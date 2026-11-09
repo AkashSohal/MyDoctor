@@ -237,7 +237,7 @@ export function AdminShell({
       {/* Desktop sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-30 hidden border-r border-secondary-200 bg-white transition-all duration-300 lg:block',
+          'fixed bottom-0 left-0 top-16 lg:top-28 z-30 hidden border-r border-secondary-200 bg-white transition-all duration-300 lg:block',
           collapsed ? 'w-20' : 'w-64'
         )}
       >
@@ -268,7 +268,7 @@ export function AdminShell({
 
       {/* Main column */}
       <div className={cn('transition-all duration-300', collapsed ? 'lg:pl-20' : 'lg:pl-64')}>
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-secondary-200 bg-white/90 px-4 backdrop-blur sm:px-6">
+        <header className="sticky top-16 lg:top-28 z-20 flex h-16 items-center gap-3 border-b border-secondary-200 bg-white/90 px-4 backdrop-blur sm:px-6">
           <Button
             variant="ghost"
             size="icon"

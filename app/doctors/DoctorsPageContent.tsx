@@ -147,10 +147,10 @@ export function DoctorsPageContent() {
   return (
     <div className="min-h-screen bg-secondary-50">
       {/* Page Header */}
-      <div className="bg-white border-b border-secondary-200 sticky top-16 z-40">
+      <div className="bg-white border-b border-secondary-200 sticky top-16 lg:top-28 z-40">
         <div className="container py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="lg:shrink-0 lg:max-w-[40%]">
               <h1 className="text-2xl font-bold text-secondary-900">
                 {searchQuery ? `Results for "${searchQuery}"` : 'Find Doctors Near You'}
               </h1>

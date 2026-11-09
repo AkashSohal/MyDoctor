@@ -157,7 +157,7 @@ export function HospitalDetailsClient({ hospital }: HospitalDetailsClientProps) 
                   size="lg"
                   variant="outline"
                   asChild
-                  className="w-full border-white/30 text-white hover:bg-white/10"
+                  className="w-full bg-transparent border-white/30 text-white hover:bg-white/10"
                 >
                   <a href={directions} target="_blank" rel="noopener noreferrer">
                     <Navigation className="mr-2 h-4 w-4" />

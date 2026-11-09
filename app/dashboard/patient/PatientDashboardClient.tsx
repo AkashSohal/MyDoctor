@@ -114,7 +114,7 @@ export function PatientDashboardClient({
 
       {/* Stats Cards */}
       <div className="container py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-6 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-12 relative z-10">
           <Card className="border-0 shadow-card overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-primary-500 to-teal-500" />
             <CardContent className="p-6">
@@ -182,7 +182,7 @@ export function PatientDashboardClient({
 
         {/* Tabs */}
         <Tabs defaultValue="upcoming" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-2 h-auto gap-1 sm:h-10 sm:grid-cols-4">
             <TabsTrigger value="upcoming">Upcoming</TabsTrigger>
             <TabsTrigger value="past">Past</TabsTrigger>
             <TabsTrigger value="saved">Saved Doctors</TabsTrigger>

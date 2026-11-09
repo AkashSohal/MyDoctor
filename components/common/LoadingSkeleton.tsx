@@ -9,13 +9,13 @@ export function DoctorCardSkeleton() {
     <Card>
       <CardContent className="p-5">
         <div className="flex items-start gap-4">
-          <Skeleton variant="circular" className="h-16 w-16" />
-          <div className="flex-1 space-y-3">
+          <Skeleton variant="circular" className="h-16 w-16 shrink-0" />
+          <div className="flex-1 min-w-0 space-y-3">
             <div className="flex items-center gap-2">
-              <Skeleton className="h-6 w-48" />
-              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-6 flex-1 min-w-0 max-w-48" />
+              <Skeleton className="h-5 w-20 shrink-0" />
             </div>
-            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-4 w-32 max-w-full" />
             <div className="flex flex-wrap gap-2">
               <Skeleton className="h-6 w-24" />
               <Skeleton className="h-6 w-20" />
@@ -55,10 +55,10 @@ export function DoctorProfileSkeleton() {
         <CardContent className="p-6">
           <div className="flex items-start gap-6">
             <Skeleton variant="circular" className="h-24 w-24" />
-            <div className="flex-1 space-y-4">
+            <div className="flex-1 min-w-0 space-y-4">
               <div className="flex items-center gap-3">
-                <Skeleton className="h-8 w-64" />
-                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-8 flex-1 min-w-0 max-w-64" />
+                <Skeleton className="h-6 w-24 shrink-0" />
               </div>
               <div className="flex flex-wrap gap-3">
                 <Skeleton className="h-8 w-40" />

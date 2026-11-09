@@ -220,18 +220,18 @@ export function NewAppointmentContent() {
   return (
     <div className="min-h-screen bg-secondary-50">
       {/* Progress Steps */}
-      <div className="bg-white border-b border-secondary-200 sticky top-0 z-40">
+      <div className="bg-white border-b border-secondary-200 sticky top-16 lg:top-28 z-40">
         <div className="container">
           <div className="flex items-center justify-between py-4">
-            <Button variant="ghost" size="sm" onClick={() => router.back()}>
+            <Button variant="ghost" size="sm" onClick={() => router.back()} className="shrink-0">
               <ArrowLeft className="h-4 w-4 mr-1" />
               Back
             </Button>
-            <div className="flex items-center gap-1 overflow-x-auto px-4">
+            <div className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-hide px-4">
               {steps.map((s, i) => (
                 <React.Fragment key={s.num}>
                   <div className={cn(
-                    'flex items-center gap-2 px-3 py-2 rounded-lg transition-colors',
+                    'flex shrink-0 items-center gap-2 px-2.5 sm:px-3 py-2 rounded-lg transition-colors',
                     i < step - 1 ? 'bg-primary-100 text-primary-700' :
                     i === step - 1 ? 'bg-primary-600 text-white' :
                     'bg-secondary-100 text-secondary-500'
@@ -247,7 +247,7 @@ export function NewAppointmentContent() {
                   </div>
                   {i < steps.length - 1 && (
                     <div className={cn(
-                      'h-1 w-12 rounded transition-colors',
+                      'hidden sm:block h-1 w-12 shrink-0 rounded transition-colors',
                       i < step - 1 ? 'bg-primary-600' : 'bg-secondary-200'
                     )} />
                   )}

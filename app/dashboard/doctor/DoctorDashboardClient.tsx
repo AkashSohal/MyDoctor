@@ -214,7 +214,7 @@ export function DoctorDashboardClient({
       </div>
 
       <div className="container py-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-6 relative z-10">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 -mt-12 relative z-10">
           <Card className="border-0 shadow-card overflow-hidden">
             <div className="h-1 bg-gradient-to-r from-primary-500 to-teal-500" />
             <CardContent className="p-6">

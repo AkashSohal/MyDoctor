@@ -336,7 +336,7 @@ export default function DoctorOnboardingPage() {
   return (
     <div className="min-h-screen bg-secondary-50">
       {/* Header */}
-      <div className="bg-white border-b border-secondary-200 sticky top-0 z-40">
+      <div className="bg-white border-b border-secondary-200 sticky top-16 lg:top-28 z-40">
         <div className="container">
           <div className="flex items-center justify-between py-4">
             <Link href="/" className="flex items-center gap-2">

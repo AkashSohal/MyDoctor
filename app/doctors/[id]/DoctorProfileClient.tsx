@@ -176,7 +176,7 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
                 variant="outline" 
                 disabled={!doctor.latitude || !doctor.longitude}
                 onClick={() => window.open(`https://maps.google.com/?daddr=${doctor.latitude},${doctor.longitude}`, '_blank')}
-                className="border-white/30 text-white hover:bg-white/10"
+                className="bg-transparent border-white/30 text-white hover:bg-white/10"
               >
                 <MapPin className="mr-2 h-4 w-4" />
                 Directions
@@ -218,18 +218,18 @@ export function DoctorProfileClient({ doctor }: DoctorProfileClientProps) {
       </div>
 
       {/* Tab Navigation */}
-      <div className="bg-white border-b border-secondary-200 sticky top-16 z-40 shadow-sm">
+      <div className="bg-white border-b border-secondary-200 sticky top-16 lg:top-28 z-40 shadow-sm">
         <div className="container">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid w-full grid-cols-4 lg:grid-cols-5 h-14 bg-transparent">
+            <TabsList className="flex w-full h-14 justify-start lg:justify-center bg-transparent overflow-x-auto scrollbar-hide">
               {['overview', 'availability', 'hospitals', 'reviews', 'map'].map((tab) => (
-                <TabsTrigger 
-                  key={tab} 
-                  value={tab} 
+                <TabsTrigger
+                  key={tab}
+                  value={tab}
                   className={cn(
-                    'capitalize rounded-none border-b-2 transition-all duration-200 font-medium',
-                    activeTab === tab 
-                      ? 'border-primary-600 text-primary-600 bg-transparent' 
+                    'shrink-0 capitalize rounded-none border-b-2 transition-all duration-200 font-medium',
+                    activeTab === tab
+                      ? 'border-primary-600 text-primary-600 bg-transparent'
                       : 'border-transparent text-secondary-500 hover:text-secondary-900 bg-transparent'
                   )}
                 >
